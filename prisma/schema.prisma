@@ -1,0 +1,152 @@
+// Tribes — World Cup 2026 prediction league.
+// Decisions encoded here: predictions are GLOBAL per user (unique on userId+matchId,
+// no leagueId); knockout outcome can be decided by penalties via `advancingSide`;
+// `teamsKnown` gates predictability for TBD knockout fixtures.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+}
+
+enum Stage {
+  GROUP
+  KNOCKOUT
+}
+
+enum Side {
+  HOME
+  AWAY
+}
+
+// ---- Auth.js (NextAuth) models + app user ----
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  accounts       Account[]
+  sessions       Session[]
+  predictions    Prediction[]
+  memberships    LeagueMember[]
+  administered   League[]       @relation("LeagueAdmin")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---- Domain models ----
+
+model League {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique
+  adminId    String
+  createdAt  DateTime @default(now())
+
+  admin   User           @relation("LeagueAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  members LeagueMember[]
+}
+
+model LeagueMember {
+  leagueId String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([leagueId, userId])
+  @@index([userId])
+}
+
+model Match {
+  id         String      @id @default(cuid())
+  externalId String?     @unique
+  homeTeam   String
+  awayTeam   String
+  homeCrest  String?
+  awayCrest  String?
+  groupName  String?
+  kickoffTime DateTime
+  status     MatchStatus @default(SCHEDULED)
+  stage      Stage       @default(GROUP)
+  homeScore  Int?
+  awayScore  Int?
+  // For knockout matches decided beyond a draw (extra time / penalties):
+  // which side advanced. Used for the OUTCOME scoring tier.
+  advancingSide Side?
+  // False when the fixture is a placeholder (e.g. "Winner Group A") and not yet
+  // resolved to real teams. Predictions are blocked until true.
+  teamsKnown Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  predictions Prediction[]
+
+  @@index([kickoffTime])
+}
+
+model Prediction {
+  id                 String    @id @default(cuid())
+  userId             String
+  matchId            String
+  homePredictedScore Int
+  awayPredictedScore Int
+  submittedAt        DateTime  @default(now())
+  // Scoring output (null until the match is scored). Idempotent recompute overwrites.
+  points             Int?
+  isExact            Boolean   @default(false)
+  scoredAt           DateTime?
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+  @@index([matchId])
+}
