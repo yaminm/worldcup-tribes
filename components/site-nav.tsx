@@ -45,7 +45,12 @@ export function SiteNav({
                 </Link>
               )}
               <div className="ml-2 flex items-center gap-2">
-                <span className="hidden text-muted sm:inline">{user.name}</span>
+                <Link
+                  href="/profile"
+                  className="hidden text-muted hover:text-foreground sm:inline"
+                >
+                  {user.name}
+                </Link>
                 <form action={logout}>
                   <button
                     type="submit"
