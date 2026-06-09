@@ -75,6 +75,28 @@ test.describe("Outrights", () => {
   });
 });
 
+test.describe("Bracket", () => {
+  test("a user can pick who advances in an open knockout tie", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/bracket");
+
+    const tie = page.getByTestId("adv-Portugal-Netherlands");
+    await expect(tie).toBeVisible();
+    await tie.getByRole("button", { name: "Portugal" }).click();
+    await expect(tie.getByText("Pick saved")).toBeVisible();
+  });
+
+  test("shows the result and points on a finished knockout tie", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/bracket");
+
+    // England advanced; dev picked England (HOME) on a Round of 16 tie => 8 pts.
+    const tie = page.getByTestId("adv-England-Germany");
+    await expect(tie.getByText(/England advanced/)).toBeVisible();
+    await expect(tie.getByText(/England · 8 pts/)).toBeVisible();
+  });
+});
+
 test.describe("Groups", () => {
   test("shows group standings", async ({ page }) => {
     await devLogin(page, "dev@tribes.local", "Dev Player");

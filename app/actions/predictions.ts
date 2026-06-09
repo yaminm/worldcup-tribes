@@ -56,6 +56,44 @@ export async function submitPrediction(
   return { ok: true };
 }
 
+const advancementSchema = z.object({
+  matchId: z.string().min(1),
+  side: z.enum(["HOME", "AWAY"]),
+});
+
+export async function submitAdvancement(
+  _prev: PredictionState,
+  formData: FormData,
+): Promise<PredictionState> {
+  const user = await requireUser();
+  const parsed = advancementSchema.safeParse({
+    matchId: formData.get("matchId"),
+    side: formData.get("side"),
+  });
+  if (!parsed.success) return { error: "Pick a team" };
+
+  const { matchId, side } = parsed.data;
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match) return { error: "Match not found" };
+  if (match.stage !== "KNOCKOUT") return { error: "Not a knockout match" };
+  if (!isPredictable(match)) {
+    return {
+      error: match.teamsKnown
+        ? "This match is locked"
+        : "Teams not confirmed yet",
+    };
+  }
+
+  await prisma.advancementPick.upsert({
+    where: { userId_matchId: { userId: user.id, matchId } },
+    update: { pickedSide: side, submittedAt: new Date() },
+    create: { userId: user.id, matchId, pickedSide: side },
+  });
+
+  revalidatePath("/bracket");
+  return { ok: true };
+}
+
 export async function setJoker(
   _prev: PredictionState,
   formData: FormData,

@@ -24,12 +24,16 @@ function StatTile({
 export default async function ProfilePage() {
   const user = await requireUser();
 
-  const [preds, outrightAgg, leagueCount] = await Promise.all([
+  const [preds, outrightAgg, advancementAgg, leagueCount] = await Promise.all([
     prisma.prediction.findMany({
       where: { userId: user.id },
       select: { points: true, isExact: true, joker: true, match: { select: { stage: true } } },
     }),
     prisma.outrightPrediction.aggregate({
+      where: { userId: user.id },
+      _sum: { points: true },
+    }),
+    prisma.advancementPick.aggregate({
       where: { userId: user.id },
       _sum: { points: true },
     }),
@@ -44,6 +48,7 @@ export default async function ProfilePage() {
       stage: p.match.stage,
     })),
     outrightAgg._sum.points ?? 0,
+    advancementAgg._sum.points ?? 0,
   );
 
   return (
@@ -67,6 +72,7 @@ export default async function ProfilePage() {
         <StatTile label="Group pts" value={stats.groupPoints} />
         <StatTile label="Knockout pts" value={stats.knockoutPoints} />
         <StatTile label="Outright pts" value={stats.outrightPoints} />
+        <StatTile label="Bracket pts" value={stats.advancementPoints} />
         <StatTile label="Correct outcomes" value={stats.correctOutcomes} />
       </div>
     </div>

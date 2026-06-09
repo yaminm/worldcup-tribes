@@ -34,8 +34,8 @@ test.describe("Leagues", () => {
     await devLogin(page, "dev@tribes.local", "Dev Player");
     await page.goto("/profile");
     await expect(page.getByText("Total points")).toBeVisible();
-    // Dev: group 20 (joker) + KO 6 + outright 10 = 36.
-    await expect(page.getByText("36").first()).toBeVisible();
+    // Dev: group 20 (joker) + KO 6 + outright 10 + bracket 8 = 44.
+    await expect(page.getByText("44").first()).toBeVisible();
   });
 
   test("the global leaderboard lists all players", async ({ page }) => {

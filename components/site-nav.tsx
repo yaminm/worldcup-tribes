@@ -33,6 +33,9 @@ export function SiteNav({
               <Link href="/outrights" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 Outrights
               </Link>
+              <Link href="/bracket" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                Bracket
+              </Link>
               <Link href="/leagues" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 Leagues
               </Link>

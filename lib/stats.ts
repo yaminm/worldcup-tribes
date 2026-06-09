@@ -9,6 +9,7 @@ export interface ProfileStats {
   totalPoints: number;
   matchPoints: number;
   outrightPoints: number;
+  advancementPoints: number;
   predictionsMade: number;
   scored: number;
   exactHits: number;
@@ -24,6 +25,7 @@ export interface ProfileStats {
 export function computeProfileStats(
   preds: ProfileStatInput[],
   outrightPoints = 0,
+  advancementPoints = 0,
 ): ProfileStats {
   const scoredPreds = preds.filter((p) => p.points !== null);
   const scored = scoredPreds.length;
@@ -39,9 +41,10 @@ export function computeProfileStats(
     .reduce((s, p) => s + (p.points ?? 0), 0);
 
   return {
-    totalPoints: matchPoints + outrightPoints,
+    totalPoints: matchPoints + outrightPoints + advancementPoints,
     matchPoints,
     outrightPoints,
+    advancementPoints,
     predictionsMade: preds.length,
     scored,
     exactHits,

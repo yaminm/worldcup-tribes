@@ -1,5 +1,36 @@
 import { prisma } from "@/lib/db";
 import { scorePrediction } from "@/lib/scoring";
+import { roundPointsFor, scoreAdvancement } from "@/lib/bracket";
+
+/**
+ * Idempotently scores knockout advancement ("who advances") picks for a match.
+ * No-op for group matches (they have no advancement picks).
+ */
+export async function scoreAdvancementForMatch(matchId: string): Promise<number> {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { advancementPicks: true },
+  });
+  if (!match || match.advancementPicks.length === 0) return 0;
+
+  const resolved = match.status === "FINISHED" && match.advancingSide !== null;
+  const roundPoints = roundPointsFor(match.groupName);
+  const now = new Date();
+
+  const updates = match.advancementPicks.map((pick) =>
+    prisma.advancementPick.update({
+      where: { id: pick.id },
+      data: resolved
+        ? {
+            points: scoreAdvancement(match.advancingSide, pick.pickedSide, roundPoints),
+            scoredAt: now,
+          }
+        : { points: null, scoredAt: null },
+    }),
+  );
+  await prisma.$transaction(updates);
+  return resolved ? updates.length : 0;
+}
 
 export interface ScoreMatchResult {
   matchId: string;
@@ -31,6 +62,7 @@ export async function scoreMatch(matchId: string): Promise<ScoreMatchResult> {
         data: { points: null, isExact: false, scoredAt: null },
       });
     }
+    await scoreAdvancementForMatch(matchId);
     return { matchId, scored: 0, skipped: true };
   }
 
@@ -52,6 +84,7 @@ export async function scoreMatch(matchId: string): Promise<ScoreMatchResult> {
   });
 
   if (updates.length > 0) await prisma.$transaction(updates);
+  await scoreAdvancementForMatch(matchId);
   return { matchId, scored: updates.length, skipped: false };
 }
 

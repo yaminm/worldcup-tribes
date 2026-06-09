@@ -5,6 +5,7 @@ import { scoreOutright } from "@/lib/outright-service";
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   // Order matters for FK constraints.
   await prisma.prediction.deleteMany();
+  await prisma.advancementPick.deleteMany();
   await prisma.outrightPrediction.deleteMany();
   await prisma.outright.deleteMany();
   await prisma.leagueMember.deleteMany();
@@ -120,6 +121,19 @@ export async function seedDatabase(prisma: PrismaClient): Promise<void> {
     },
   });
 
+  const openKnockout = await prisma.match.create({
+    data: {
+      externalId: "seed-open-ko",
+      homeTeam: "Portugal",
+      awayTeam: "Netherlands",
+      groupName: "Round of 16",
+      kickoffTime: at(50),
+      status: "SCHEDULED",
+      stage: "KNOCKOUT",
+      teamsKnown: true,
+    },
+  });
+
   await prisma.match.create({
     data: {
       externalId: "seed-tbd",
@@ -205,7 +219,18 @@ export async function seedDatabase(prisma: PrismaClient): Promise<void> {
     ],
   });
 
-  // Score the finished matches + resolved outright.
+  // --- Knockout advancement picks (bracket) ---
+  await prisma.advancementPick.createMany({
+    data: [
+      // Dev picked the side that advanced (England, HOME) => round points.
+      { userId: dev.id, matchId: finishedKO.id, pickedSide: "HOME" },
+      // Rival picked the wrong side => 0.
+      { userId: rival.id, matchId: finishedKO.id, pickedSide: "AWAY" },
+    ],
+  });
+  void openKnockout;
+
+  // Score the finished matches (also scores advancement picks) + resolved outright.
   await scoreMatch(finishedGroup.id);
   await scoreMatch(finishedKO.id);
   await scoreOutright(resolvedOutright.id);
