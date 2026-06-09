@@ -2,14 +2,19 @@ import { prisma } from "@/lib/db";
 import { requireSuperadmin } from "@/lib/session";
 import { toMatchView } from "@/lib/match-view";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { SyncControls, AdminResultForm } from "@/components/admin-controls";
+import {
+  SyncControls,
+  AdminResultForm,
+  AdminOutrightForm,
+} from "@/components/admin-controls";
 
 export default async function AdminPage() {
   await requireSuperadmin();
 
-  const matches = await prisma.match.findMany({
-    orderBy: { kickoffTime: "asc" },
-  });
+  const [matches, outrights] = await Promise.all([
+    prisma.match.findMany({ orderBy: { kickoffTime: "asc" } }),
+    prisma.outright.findMany({ orderBy: { sortOrder: "asc" } }),
+  ]);
 
   const provider = process.env.FOOTBALL_DATA_API_TOKEN
     ? "football-data.org"
@@ -46,6 +51,28 @@ export default async function AdminPage() {
           )}
         </div>
       </Card>
+
+      {outrights.length > 0 && (
+        <Card>
+          <CardTitle className="mb-2">Outright answers</CardTitle>
+          <CardDescription>
+            Set the correct answer to score an outright. Blank leaves it unresolved.
+          </CardDescription>
+          <div className="mt-2 flex flex-col">
+            {outrights.map((o) => (
+              <AdminOutrightForm
+                key={o.id}
+                outright={{
+                  id: o.id,
+                  question: o.question,
+                  points: o.points,
+                  correctAnswer: o.correctAnswer,
+                }}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

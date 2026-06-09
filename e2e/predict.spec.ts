@@ -41,6 +41,25 @@ test.describe("Predictions", () => {
   });
 });
 
+test.describe("Outrights", () => {
+  test("a user can pick a tournament outright", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/outrights");
+    await expect(page.getByText("World Cup winner")).toBeVisible();
+
+    await page.locator("select").first().selectOption("Brazil");
+    await page.getByRole("button", { name: /pick|update/i }).first().click();
+    await expect(page.getByText("Saved").first()).toBeVisible();
+  });
+
+  test("shows points earned on a resolved outright", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/outrights");
+    // Dev picked France on the resolved demo outright (correct) => 10 pts.
+    await expect(page.getByText(/Highest-scoring team/)).toBeVisible();
+  });
+});
+
 test.describe("Groups", () => {
   test("shows group standings", async ({ page }) => {
     await devLogin(page, "dev@tribes.local", "Dev Player");

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { requireSuperadmin } from "@/lib/session";
 import { syncMatches } from "@/lib/matches/sync";
 import { recalcAll, scoreMatch } from "@/lib/scoring-service";
+import { scoreOutright } from "@/lib/outright-service";
 
 export interface AdminState {
   ok?: boolean;
@@ -90,6 +91,40 @@ export async function setResultAction(
     ok: true,
     message: result.skipped
       ? "Saved (not finished, predictions reset to unscored)"
+      : `Saved and scored ${result.scored} predictions`,
+  };
+}
+
+const outrightSchema = z.object({
+  outrightId: z.string().min(1),
+  correctAnswer: z.string().trim().max(100).optional(),
+});
+
+export async function setOutrightAnswerAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireSuperadmin();
+
+  const parsed = outrightSchema.safeParse({
+    outrightId: formData.get("outrightId"),
+    correctAnswer: formData.get("correctAnswer") || undefined,
+  });
+  if (!parsed.success) return { error: "Invalid input" };
+
+  const { outrightId, correctAnswer } = parsed.data;
+  await prisma.outright.update({
+    where: { id: outrightId },
+    data: { correctAnswer: correctAnswer && correctAnswer.length > 0 ? correctAnswer : null },
+  });
+
+  const result = await scoreOutright(outrightId);
+  revalidatePath("/admin");
+  revalidatePath("/outrights");
+  return {
+    ok: true,
+    message: result.skipped
+      ? "Cleared (predictions reset to unscored)"
       : `Saved and scored ${result.scored} predictions`,
   };
 }

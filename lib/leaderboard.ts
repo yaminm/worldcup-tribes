@@ -30,9 +30,16 @@ export async function getLeaderboard(leagueId: string): Promise<LeaderboardRow[]
         select: { points: true, isExact: true, submittedAt: true },
       });
 
-      const points = preds.reduce((sum, p) => sum + (p.points ?? 0), 0);
+      const matchPoints = preds.reduce((sum, p) => sum + (p.points ?? 0), 0);
       const exactHits = preds.filter((p) => p.isExact).length;
       const submittedTimes = preds.map((p) => p.submittedAt.getTime());
+
+      // Tournament outright points count toward the same total.
+      const outrightAgg = await prisma.outrightPrediction.aggregate({
+        where: { userId: m.userId },
+        _sum: { points: true },
+      });
+      const points = matchPoints + (outrightAgg._sum.points ?? 0);
 
       return {
         userId: m.userId,

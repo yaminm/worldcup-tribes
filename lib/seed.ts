@@ -1,9 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { scoreMatch } from "@/lib/scoring-service";
+import { scoreOutright } from "@/lib/outright-service";
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   // Order matters for FK constraints.
   await prisma.prediction.deleteMany();
+  await prisma.outrightPrediction.deleteMany();
+  await prisma.outright.deleteMany();
   await prisma.leagueMember.deleteMany();
   await prisma.league.deleteMany();
   await prisma.match.deleteMany();
@@ -176,7 +179,33 @@ export async function seedDatabase(prisma: PrismaClient): Promise<void> {
   void open;
   void league;
 
-  // Score the finished matches.
+  // --- Outrights (tournament-long bonus questions) ---
+  await prisma.outright.create({
+    data: { key: "champion", question: "World Cup winner", type: "TEAM", points: 30, lockAt: at(48), sortOrder: 1 },
+  });
+  await prisma.outright.create({
+    data: { key: "golden_boot", question: "Golden Boot (top scorer)", type: "TEXT", points: 20, lockAt: at(48), sortOrder: 2 },
+  });
+  const resolvedOutright = await prisma.outright.create({
+    data: {
+      key: "top_scoring_team",
+      question: "Highest-scoring team (demo, resolved)",
+      type: "TEAM",
+      points: 10,
+      lockAt: at(-1),
+      correctAnswer: "France",
+      sortOrder: 3,
+    },
+  });
+  await prisma.outrightPrediction.createMany({
+    data: [
+      { userId: dev.id, outrightId: resolvedOutright.id, answer: "France" },
+      { userId: rival.id, outrightId: resolvedOutright.id, answer: "Brazil" },
+    ],
+  });
+
+  // Score the finished matches + resolved outright.
   await scoreMatch(finishedGroup.id);
   await scoreMatch(finishedKO.id);
+  await scoreOutright(resolvedOutright.id);
 }

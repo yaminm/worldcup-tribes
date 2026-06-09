@@ -28,6 +28,11 @@ enum Side {
   AWAY
 }
 
+enum OutrightType {
+  TEAM
+  TEXT
+}
+
 // ---- Auth.js (NextAuth) models + app user ----
 
 model User {
@@ -38,11 +43,12 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
 
-  accounts       Account[]
-  sessions       Session[]
-  predictions    Prediction[]
-  memberships    LeagueMember[]
-  administered   League[]       @relation("LeagueAdmin")
+  accounts            Account[]
+  sessions            Session[]
+  predictions         Prediction[]
+  outrightPredictions OutrightPrediction[]
+  memberships         LeagueMember[]
+  administered        League[]             @relation("LeagueAdmin")
 }
 
 model Account {
@@ -136,6 +142,37 @@ model Match {
   predictions Prediction[]
 
   @@index([kickoffTime])
+}
+
+// Tournament-long "outright" questions (champion, Golden Boot, ...).
+model Outright {
+  id            String       @id @default(cuid())
+  key           String       @unique
+  question      String
+  type          OutrightType @default(TEAM)
+  points        Int          @default(20)
+  correctAnswer String?
+  lockAt        DateTime
+  sortOrder     Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  predictions OutrightPrediction[]
+}
+
+model OutrightPrediction {
+  id          String    @id @default(cuid())
+  userId      String
+  outrightId  String
+  answer      String
+  points      Int?
+  scoredAt    DateTime?
+  submittedAt DateTime  @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outright Outright @relation(fields: [outrightId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, outrightId])
+  @@index([outrightId])
 }
 
 model Prediction {

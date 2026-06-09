@@ -8,9 +8,47 @@ import {
   runSyncAction,
   recalcAction,
   setResultAction,
+  setOutrightAnswerAction,
   type AdminState,
 } from "@/app/actions/admin";
 import type { MatchView } from "@/lib/match-view";
+
+export interface AdminOutright {
+  id: string;
+  question: string;
+  points: number;
+  correctAnswer: string | null;
+}
+
+export function AdminOutrightForm({ outright }: { outright: AdminOutright }) {
+  const [state, action, pending] = useActionState<AdminState, FormData>(
+    setOutrightAnswerAction,
+    {},
+  );
+  return (
+    <form
+      action={action}
+      className="flex flex-wrap items-center gap-2 border-t border-border/60 py-3"
+    >
+      <input type="hidden" name="outrightId" value={outright.id} />
+      <span className="min-w-40 flex-1 text-sm font-medium">
+        {outright.question}{" "}
+        <span className="text-xs text-muted">({outright.points} pts)</span>
+      </span>
+      <Input
+        name="correctAnswer"
+        defaultValue={outright.correctAnswer ?? ""}
+        placeholder="Correct answer (blank = unresolved)"
+        className="h-9 w-56"
+      />
+      <Button type="submit" size="sm" disabled={pending}>
+        {pending ? "Saving…" : "Save"}
+      </Button>
+      {state.error && <span className="text-xs text-danger">{state.error}</span>}
+      {state.ok && <span className="text-xs text-success">✓</span>}
+    </form>
+  );
+}
 
 export function SyncControls() {
   const [syncState, syncAction, syncing] = useActionState<AdminState, FormData>(
