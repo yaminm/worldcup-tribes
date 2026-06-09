@@ -31,13 +31,28 @@ test.describe("Predictions", () => {
     await expect(tbd.getByText("Teams not confirmed yet")).toBeVisible();
   });
 
-  test("finished matches show earned points", async ({ page }) => {
+  test("finished matches show earned points (with joker doubling)", async ({ page }) => {
     await devLogin(page, "dev@tribes.local", "Dev Player");
     await page.goto("/predict");
 
-    // Dev predicted 4-1 exactly on France v Australia => 10 pts.
+    // Dev predicted 4-1 exactly on France v Australia with a joker => 10 * 2 = 20 pts.
     const finished = page.getByTestId("match-France-Australia");
-    await expect(finished.getByText(/10 pts/)).toBeVisible();
+    await expect(finished.getByText(/20 pts/)).toBeVisible();
+    await expect(finished.getByText("2× JOKER")).toBeVisible();
+  });
+
+  test("a user can toggle a joker on an open prediction", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/predict");
+
+    // Brazil v Serbia is open (seeded). Predict, then use a joker.
+    const card = page.getByTestId("match-Brazil-Serbia");
+    await card.getByRole("button", { name: "Increase home score" }).click();
+    await card.getByRole("button", { name: /predict|update/i }).click();
+    await expect(card.getByText("Saved")).toBeVisible();
+
+    await card.getByRole("button", { name: /use joker/i }).click();
+    await expect(card.getByText("2× JOKER")).toBeVisible();
   });
 });
 

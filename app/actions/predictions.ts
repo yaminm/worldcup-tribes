@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { isPredictable } from "@/lib/locking";
+import { JOKERS_PER_STAGE } from "@/lib/joker";
 
 export interface PredictionState {
   ok?: boolean;
@@ -49,6 +50,44 @@ export async function submitPrediction(
     where: { userId_matchId: { userId: user.id, matchId } },
     update: { homePredictedScore, awayPredictedScore, submittedAt: new Date() },
     create: { userId: user.id, matchId, homePredictedScore, awayPredictedScore },
+  });
+
+  revalidatePath("/predict");
+  return { ok: true };
+}
+
+export async function setJoker(
+  _prev: PredictionState,
+  formData: FormData,
+): Promise<PredictionState> {
+  const user = await requireUser();
+  const matchId = String(formData.get("matchId") ?? "");
+  const enabled = String(formData.get("enabled") ?? "") === "true";
+  if (!matchId) return { error: "Match not found" };
+
+  const prediction = await prisma.prediction.findUnique({
+    where: { userId_matchId: { userId: user.id, matchId } },
+    include: { match: true },
+  });
+  if (!prediction) return { error: "Make a prediction before using a joker" };
+
+  if (!isPredictable(prediction.match)) {
+    return { error: "This match is locked" };
+  }
+
+  if (enabled && !prediction.joker) {
+    const stage = prediction.match.stage;
+    const used = await prisma.prediction.count({
+      where: { userId: user.id, joker: true, match: { stage }, NOT: { matchId } },
+    });
+    if (used >= JOKERS_PER_STAGE[stage]) {
+      return { error: `No ${stage.toLowerCase()} jokers left` };
+    }
+  }
+
+  await prisma.prediction.update({
+    where: { userId_matchId: { userId: user.id, matchId } },
+    data: { joker: enabled },
   });
 
   revalidatePath("/predict");

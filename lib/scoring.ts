@@ -74,6 +74,8 @@ export interface MatchResult {
 export interface PredictionInput {
   homePredictedScore: number;
   awayPredictedScore: number;
+  /** If true, the points for this match are doubled (a "joker"). */
+  joker?: boolean;
 }
 
 export interface ScoreResult {
@@ -98,8 +100,9 @@ export function scorePrediction(
   );
 
   const multiplier = match.stage === "KNOCKOUT" ? KNOCKOUT_MULTIPLIER : 1;
+  const jokerMultiplier = prediction.joker ? 2 : 1;
   // All base values (0,4,6,10) * 1.5 are integers; round defensively anyway.
-  const points = Math.round(base * multiplier);
+  const points = Math.round(base * multiplier) * jokerMultiplier;
 
   return { points, isExact: base === 10 };
 }

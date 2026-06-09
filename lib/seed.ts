@@ -136,12 +136,13 @@ export async function seedDatabase(prisma: PrismaClient): Promise<void> {
   // --- Predictions (on finished matches, so they score) ---
   await prisma.prediction.createMany({
     data: [
-      // Dev: exact on group (10), correct KO winner via penalties (4 * 1.5 = 6)
+      // Dev: exact on group with joker (10 * 2 = 20), correct KO winner (4 * 1.5 = 6)
       {
         userId: dev.id,
         matchId: finishedGroup.id,
         homePredictedScore: 4,
         awayPredictedScore: 1,
+        joker: true,
       },
       {
         userId: dev.id,

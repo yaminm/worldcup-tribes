@@ -2,14 +2,18 @@
 
 import { useActionState, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, Lock, Check, Clock, MapPin } from "lucide-react";
+import { Minus, Plus, Lock, Check, Clock, MapPin, Zap } from "lucide-react";
 import { useMounted } from "@/components/use-mounted";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusPill } from "@/components/status-pill";
 import { Countdown } from "@/components/countdown";
-import { submitPrediction, type PredictionState } from "@/app/actions/predictions";
+import {
+  submitPrediction,
+  setJoker,
+  type PredictionState,
+} from "@/app/actions/predictions";
 import { isLocked } from "@/lib/locking";
 import type { MatchView, PredictionView } from "@/lib/match-view";
 
@@ -87,6 +91,10 @@ export function MatchPrediction({
     submitPrediction,
     {},
   );
+  const [jokerState, jokerAction, jokerPending] = useActionState<
+    PredictionState,
+    FormData
+  >(setJoker, {});
 
   const finished = match.status === "FINISHED";
   const locked = !match.teamsKnown || isLocked({ kickoffTime: match.kickoffTime });
@@ -117,6 +125,7 @@ export function MatchPrediction({
           {match.stage === "KNOCKOUT" && (
             <Badge variant="warning">KO ×1.5</Badge>
           )}
+          {prediction?.joker && <Badge variant="accent">2× JOKER</Badge>}
         </span>
         <span className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
@@ -198,27 +207,62 @@ export function MatchPrediction({
           <Lock className="h-3.5 w-3.5" /> Predictions locked
         </div>
       ) : (
-        <form action={formAction} className="flex items-center justify-between gap-3">
-          <input type="hidden" name="matchId" value={match.id} />
-          <input type="hidden" name="homePredictedScore" value={home} />
-          <input type="hidden" name="awayPredictedScore" value={away} />
-          <span className="text-xs">
-            <Countdown kickoffTime={match.kickoffTime} />
-          </span>
-          <div className="flex items-center gap-2">
-            {state?.ok && (
-              <span className="flex items-center gap-1 text-xs text-success">
-                <Check className="h-3.5 w-3.5" /> Saved
+        <div className="flex flex-col gap-2">
+          <form action={formAction} className="flex items-center justify-between gap-3">
+            <input type="hidden" name="matchId" value={match.id} />
+            <input type="hidden" name="homePredictedScore" value={home} />
+            <input type="hidden" name="awayPredictedScore" value={away} />
+            <span className="text-xs">
+              <Countdown kickoffTime={match.kickoffTime} />
+            </span>
+            <div className="flex items-center gap-2">
+              {state?.ok && (
+                <span className="flex items-center gap-1 text-xs text-success">
+                  <Check className="h-3.5 w-3.5" /> Saved
+                </span>
+              )}
+              {state?.error && (
+                <span className="text-xs text-danger">{state.error}</span>
+              )}
+              <Button type="submit" size="sm" disabled={pending}>
+                {pending ? "Saving…" : prediction ? "Update" : "Predict"}
+              </Button>
+            </div>
+          </form>
+
+          {prediction && (
+            <form
+              action={jokerAction}
+              className="flex items-center justify-between gap-2 border-t border-border/50 pt-2"
+            >
+              <input type="hidden" name="matchId" value={match.id} />
+              <input
+                type="hidden"
+                name="enabled"
+                value={prediction.joker ? "false" : "true"}
+              />
+              <span className="text-xs text-muted">
+                {prediction.joker
+                  ? "Points doubled for this match"
+                  : "Double your points on this match"}
               </span>
-            )}
-            {state?.error && (
-              <span className="text-xs text-danger">{state.error}</span>
-            )}
-            <Button type="submit" size="sm" disabled={pending}>
-              {pending ? "Saving…" : prediction ? "Update" : "Predict"}
-            </Button>
-          </div>
-        </form>
+              <div className="flex items-center gap-2">
+                {jokerState?.error && (
+                  <span className="text-xs text-danger">{jokerState.error}</span>
+                )}
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant={prediction.joker ? "primary" : "secondary"}
+                  disabled={jokerPending}
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  {prediction.joker ? "Joker on" : "Use joker"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       )}
     </Card>
   );

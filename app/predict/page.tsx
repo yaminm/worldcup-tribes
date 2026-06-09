@@ -1,14 +1,24 @@
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { MatchList } from "@/components/match-list";
+import { jokersRemaining } from "@/lib/joker";
+import { Badge } from "@/components/ui/badge";
 
 export default async function PredictPage() {
   const user = await requireUser();
 
-  const matches = await prisma.match.findMany({
-    orderBy: { kickoffTime: "asc" },
-    include: { predictions: { where: { userId: user.id } } },
-  });
+  const [matches, groupJokers, koJokers] = await Promise.all([
+    prisma.match.findMany({
+      orderBy: { kickoffTime: "asc" },
+      include: { predictions: { where: { userId: user.id } } },
+    }),
+    prisma.prediction.count({
+      where: { userId: user.id, joker: true, match: { stage: "GROUP" } },
+    }),
+    prisma.prediction.count({
+      where: { userId: user.id, joker: true, match: { stage: "KNOCKOUT" } },
+    }),
+  ]);
 
   const upcoming = matches.filter((m) => m.status !== "FINISHED");
   const finished = matches
@@ -17,11 +27,18 @@ export default async function PredictPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Matches</h1>
-        <p className="text-muted">
-          Lock in a scoreline up to 5 minutes before kickoff.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight">Matches</h1>
+          <p className="text-muted">
+            Lock in a scoreline up to 5 minutes before kickoff.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted">Jokers left</span>
+          <Badge variant="accent">Group {jokersRemaining("GROUP", groupJokers)}</Badge>
+          <Badge variant="accent">KO {jokersRemaining("KNOCKOUT", koJokers)}</Badge>
+        </div>
       </div>
 
       {upcoming.length > 0 && (

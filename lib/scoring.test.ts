@@ -103,4 +103,31 @@ describe("scorePrediction (multiplier + isExact)", () => {
       ),
     ).toEqual({ points: 0, isExact: false });
   });
+
+  it("joker doubles a group exact => 20 pts", () => {
+    expect(
+      scorePrediction(
+        { stage: "GROUP", homeScore: 2, awayScore: 1 },
+        { homePredictedScore: 2, awayPredictedScore: 1, joker: true },
+      ),
+    ).toEqual({ points: 20, isExact: true });
+  });
+
+  it("joker stacks with knockout multiplier => 30 pts (10 * 1.5 * 2)", () => {
+    expect(
+      scorePrediction(
+        { stage: "KNOCKOUT", homeScore: 2, awayScore: 1 },
+        { homePredictedScore: 2, awayPredictedScore: 1, joker: true },
+      ),
+    ).toEqual({ points: 30, isExact: true });
+  });
+
+  it("joker doubles a 0-point miss to still 0", () => {
+    expect(
+      scorePrediction(
+        { stage: "GROUP", homeScore: 3, awayScore: 1 },
+        { homePredictedScore: 0, awayPredictedScore: 2, joker: true },
+      ),
+    ).toEqual({ points: 0, isExact: false });
+  });
 });

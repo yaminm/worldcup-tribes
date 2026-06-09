@@ -27,6 +27,7 @@ export interface PredictionView {
   awayPredictedScore: number;
   points: number | null;
   isExact: boolean;
+  joker: boolean;
 }
 
 interface MatchLike {
@@ -78,6 +79,7 @@ interface PredictionLike {
   awayPredictedScore: number;
   points: number | null;
   isExact: boolean;
+  joker?: boolean;
 }
 
 export function toPredictionView(p: PredictionLike | null): PredictionView | null {
@@ -87,5 +89,6 @@ export function toPredictionView(p: PredictionLike | null): PredictionView | nul
     awayPredictedScore: p.awayPredictedScore,
     points: p.points,
     isExact: p.isExact,
+    joker: p.joker ?? false,
   };
 }
