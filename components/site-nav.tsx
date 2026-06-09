@@ -36,6 +36,9 @@ export function SiteNav({
               <Link href="/leagues" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 Leagues
               </Link>
+              <Link href="/leaderboard" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                Global
+              </Link>
               {isAdmin && (
                 <Link href="/admin" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                   Admin

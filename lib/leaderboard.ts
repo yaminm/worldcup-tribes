@@ -11,22 +11,24 @@ export interface LeaderboardRow {
   rank: number;
 }
 
-/**
- * Computes a league leaderboard.
- *
- * Ranking: total points DESC, then exact-hit count DESC, then earliest
- * cumulative submission ASC (rewards people who locked in sooner), then name.
- */
-export async function getLeaderboard(leagueId: string): Promise<LeaderboardRow[]> {
-  const members = await prisma.leagueMember.findMany({
-    where: { leagueId },
-    include: { user: true },
-  });
+interface LbUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+}
 
+/**
+ * Builds a ranked leaderboard for a set of users.
+ *
+ * Ranking: total points DESC (match + outright), then exact-hit count DESC,
+ * then earliest cumulative submission ASC, then name.
+ */
+async function buildLeaderboard(users: LbUser[]): Promise<LeaderboardRow[]> {
   const rows: Omit<LeaderboardRow, "rank">[] = await Promise.all(
-    members.map(async (m) => {
+    users.map(async (u) => {
       const preds = await prisma.prediction.findMany({
-        where: { userId: m.userId },
+        where: { userId: u.id },
         select: { points: true, isExact: true, submittedAt: true },
       });
 
@@ -34,21 +36,19 @@ export async function getLeaderboard(leagueId: string): Promise<LeaderboardRow[]
       const exactHits = preds.filter((p) => p.isExact).length;
       const submittedTimes = preds.map((p) => p.submittedAt.getTime());
 
-      // Tournament outright points count toward the same total.
       const outrightAgg = await prisma.outrightPrediction.aggregate({
-        where: { userId: m.userId },
+        where: { userId: u.id },
         _sum: { points: true },
       });
       const points = matchPoints + (outrightAgg._sum.points ?? 0);
 
       return {
-        userId: m.userId,
-        name: m.user.name ?? m.user.email ?? "Player",
-        image: m.user.image,
+        userId: u.id,
+        name: u.name ?? u.email ?? "Player",
+        image: u.image,
         points,
         exactHits,
         predictions: preds.length,
-        // Sum of submission times — a stable proxy for "locked in earlier".
         lastSubmittedAt: submittedTimes.reduce((a, b) => a + b, 0),
       };
     }),
@@ -63,4 +63,26 @@ export async function getLeaderboard(leagueId: string): Promise<LeaderboardRow[]
   });
 
   return rows.map((row, i) => ({ ...row, rank: i + 1 }));
+}
+
+/** Per-league leaderboard. */
+export async function getLeaderboard(leagueId: string): Promise<LeaderboardRow[]> {
+  const members = await prisma.leagueMember.findMany({
+    where: { leagueId },
+    include: { user: true },
+  });
+  return buildLeaderboard(members.map((m) => m.user));
+}
+
+/** Global leaderboard across everyone who has made at least one prediction. */
+export async function getGlobalLeaderboard(): Promise<LeaderboardRow[]> {
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { predictions: { some: {} } },
+        { outrightPredictions: { some: {} } },
+      ],
+    },
+  });
+  return buildLeaderboard(users);
 }

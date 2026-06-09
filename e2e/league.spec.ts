@@ -30,6 +30,16 @@ test.describe("Leagues", () => {
     await expect(page).toHaveURL(/\/login\?callbackUrl=/);
   });
 
+  test("the global leaderboard lists all players", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/leaderboard");
+    await expect(
+      page.getByRole("heading", { name: "Global leaderboard" }),
+    ).toBeVisible();
+    await expect(page.locator("table").getByText("Dev Player")).toBeVisible();
+    await expect(page.locator("table").getByText("Rival Riley")).toBeVisible();
+  });
+
   test("a user can join the seeded league with its code", async ({ page }) => {
     await devLogin(page, "joiner@tribes.local", "Joiner");
     await page.goto("/leagues/join");
