@@ -116,6 +116,13 @@ interface OpenfootballMatch {
   score?: { ft?: [number, number] } | null;
 }
 
+export interface OpenfootballMeta {
+  /** team name -> FIFA code (e.g. "Mexico" -> "MEX") */
+  teamCodes?: Map<string, string>;
+  /** ground/city -> stadium info */
+  stadiums?: Map<string, { name: string; cc: string; capacity: number }>;
+}
+
 /** Knockout slots look like "2A", "1C", "W73", "L73", "RU-A" — not real teams. */
 export function isPlaceholderTeam(name: string): boolean {
   const t = name.trim();
@@ -142,7 +149,10 @@ export function parseKickoff(date: string, time?: string): Date {
   return new Date(Date.UTC(y, mo - 1, d, hh - offset, mm));
 }
 
-export function normalizeOpenfootballMatch(m: OpenfootballMatch): NormalizedMatch {
+export function normalizeOpenfootballMatch(
+  m: OpenfootballMatch,
+  meta: OpenfootballMeta = {},
+): NormalizedMatch {
   const isGroup = Boolean(m.group);
   const teamsKnown = !isPlaceholderTeam(m.team1) && !isPlaceholderTeam(m.team2);
   const ft = m.score?.ft;
@@ -153,13 +163,21 @@ export function normalizeOpenfootballMatch(m: OpenfootballMatch): NormalizedMatc
       ? `of-${m.num}`
       : `of-${m.date}-${m.team1}-${m.team2}`.replace(/\s+/g, "_");
 
+  const stadium = m.ground ? meta.stadiums?.get(m.ground) : undefined;
+
   return {
     externalId,
     homeTeam: m.team1,
     awayTeam: m.team2,
     homeCrest: null,
     awayCrest: null,
+    homeCode: teamsKnown ? meta.teamCodes?.get(m.team1) ?? null : null,
+    awayCode: teamsKnown ? meta.teamCodes?.get(m.team2) ?? null : null,
     groupName: m.group ?? m.round,
+    venue: stadium?.name ?? null,
+    city: m.ground ?? null,
+    country: stadium?.cc ?? null,
+    venueCapacity: stadium?.capacity ?? null,
     kickoffTime: parseKickoff(m.date, m.time).toISOString(),
     status: hasScore ? "FINISHED" : "SCHEDULED",
     stage: isGroup ? "GROUP" : "KNOCKOUT",
@@ -170,13 +188,54 @@ export function normalizeOpenfootballMatch(m: OpenfootballMatch): NormalizedMatc
   };
 }
 
+const OPENFOOTBALL_BASE =
+  "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026";
+
+async function fetchOpenfootballMeta(): Promise<OpenfootballMeta> {
+  try {
+    const [teamsRes, stadiumsRes] = await Promise.all([
+      fetch(`${OPENFOOTBALL_BASE}/worldcup.teams.json`, { cache: "no-store" }),
+      fetch(`${OPENFOOTBALL_BASE}/worldcup.stadiums.json`, { cache: "no-store" }),
+    ]);
+
+    const teamCodes = new Map<string, string>();
+    if (teamsRes.ok) {
+      const data = (await teamsRes.json()) as
+        | { name: string; fifa_code?: string }[]
+        | { teams?: { name: string; fifa_code?: string }[] };
+      const list = Array.isArray(data) ? data : data.teams ?? [];
+      for (const t of list) {
+        if (t.fifa_code) teamCodes.set(t.name, t.fifa_code);
+      }
+    }
+
+    const stadiums = new Map<string, { name: string; cc: string; capacity: number }>();
+    if (stadiumsRes.ok) {
+      const data = (await stadiumsRes.json()) as
+        | { city: string; name: string; cc: string; capacity: number }[]
+        | { stadiums?: { city: string; name: string; cc: string; capacity: number }[] };
+      const list = Array.isArray(data) ? data : data.stadiums ?? [];
+      for (const s of list) {
+        stadiums.set(s.city, { name: s.name, cc: s.cc, capacity: s.capacity });
+      }
+    }
+
+    return { teamCodes, stadiums };
+  } catch {
+    return {};
+  }
+}
+
 export const openfootballProvider: MatchProvider = {
   name: "openfootball",
   async getMatches() {
-    const res = await fetch(OPENFOOTBALL_URL, { cache: "no-store" });
+    const [res, meta] = await Promise.all([
+      fetch(OPENFOOTBALL_URL, { cache: "no-store" }),
+      fetchOpenfootballMeta(),
+    ]);
     if (!res.ok) throw new Error(`openfootball responded ${res.status}`);
     const data = (await res.json()) as { matches?: OpenfootballMatch[] };
-    return (data.matches ?? []).map(normalizeOpenfootballMatch);
+    return (data.matches ?? []).map((m) => normalizeOpenfootballMatch(m, meta));
   },
 };
 

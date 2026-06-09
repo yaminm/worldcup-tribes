@@ -40,3 +40,14 @@ test.describe("Predictions", () => {
     await expect(finished.getByText(/10 pts/)).toBeVisible();
   });
 });
+
+test.describe("Groups", () => {
+  test("shows group standings", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/groups");
+    await expect(page.getByRole("heading", { name: "Groups" })).toBeVisible();
+    // Seed has a finished Group F match (France 4-1 Australia).
+    await expect(page.getByText("Group F")).toBeVisible();
+    await expect(page.getByText("France").first()).toBeVisible();
+  });
+});

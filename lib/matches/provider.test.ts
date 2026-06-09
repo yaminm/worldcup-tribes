@@ -81,6 +81,44 @@ describe("normalizeOpenfootballMatch", () => {
     expect(n.groupName).toBe("Round of 32");
   });
 
+  it("enriches with team codes and venue metadata", () => {
+    const n = normalizeOpenfootballMatch(
+      {
+        round: "Matchday 1",
+        date: "2026-06-11",
+        time: "13:00 UTC-6",
+        team1: "Mexico",
+        team2: "South Africa",
+        group: "Group A",
+        ground: "Mexico City",
+      },
+      {
+        teamCodes: new Map([
+          ["Mexico", "MEX"],
+          ["South Africa", "RSA"],
+        ]),
+        stadiums: new Map([
+          ["Mexico City", { name: "Estadio Azteca", cc: "mx", capacity: 87000 }],
+        ]),
+      },
+    );
+    expect(n.homeCode).toBe("MEX");
+    expect(n.awayCode).toBe("RSA");
+    expect(n.venue).toBe("Estadio Azteca");
+    expect(n.city).toBe("Mexico City");
+    expect(n.country).toBe("mx");
+    expect(n.venueCapacity).toBe(87000);
+  });
+
+  it("does not attach codes to placeholder (TBD) teams", () => {
+    const n = normalizeOpenfootballMatch(
+      { round: "Round of 32", num: 73, date: "2026-06-28", team1: "2A", team2: "2B" },
+      { teamCodes: new Map([["2A", "XXX"]]) },
+    );
+    expect(n.homeCode).toBeNull();
+    expect(n.awayCode).toBeNull();
+  });
+
   it("maps a finished match score", () => {
     const n = normalizeOpenfootballMatch({
       round: "Matchday 1",

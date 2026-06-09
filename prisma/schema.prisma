@@ -112,7 +112,13 @@ model Match {
   awayTeam   String
   homeCrest  String?
   awayCrest  String?
+  homeCode   String?
+  awayCode   String?
   groupName  String?
+  venue      String?
+  city       String?
+  country    String?
+  venueCapacity Int?
   kickoffTime DateTime
   status     MatchStatus @default(SCHEDULED)
   stage      Stage       @default(GROUP)

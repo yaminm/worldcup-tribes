@@ -6,7 +6,13 @@ export interface MatchView {
   awayTeam: string;
   homeFlag: string;
   awayFlag: string;
+  homeCode: string | null;
+  awayCode: string | null;
   groupName: string | null;
+  venue: string | null;
+  city: string | null;
+  country: string | null;
+  venueCapacity: number | null;
   kickoffTime: string; // ISO
   status: "SCHEDULED" | "LIVE" | "FINISHED";
   stage: "GROUP" | "KNOCKOUT";
@@ -27,7 +33,13 @@ interface MatchLike {
   id: string;
   homeTeam: string;
   awayTeam: string;
+  homeCode?: string | null;
+  awayCode?: string | null;
   groupName: string | null;
+  venue?: string | null;
+  city?: string | null;
+  country?: string | null;
+  venueCapacity?: number | null;
   kickoffTime: Date;
   status: "SCHEDULED" | "LIVE" | "FINISHED";
   stage: "GROUP" | "KNOCKOUT";
@@ -44,7 +56,13 @@ export function toMatchView(m: MatchLike): MatchView {
     awayTeam: m.awayTeam,
     homeFlag: teamFlag(m.homeTeam),
     awayFlag: teamFlag(m.awayTeam),
+    homeCode: m.homeCode ?? null,
+    awayCode: m.awayCode ?? null,
     groupName: m.groupName,
+    venue: m.venue ?? null,
+    city: m.city ?? null,
+    country: m.country ?? null,
+    venueCapacity: m.venueCapacity ?? null,
     kickoffTime: m.kickoffTime.toISOString(),
     status: m.status,
     stage: m.stage,

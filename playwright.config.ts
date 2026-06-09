@@ -6,6 +6,14 @@ import { defineConfig, devices } from "@playwright/test";
 //   PLAYWRIGHT_BROWSERS_PATH=$PWD/.playwright npx playwright install chromium
 process.env.PLAYWRIGHT_BROWSERS_PATH = `${process.cwd()}/.playwright`;
 
+// SAFETY: E2E resets + seeds the database. Force a LOCAL test DB regardless of
+// any ambient DATABASE_URL (e.g. an exported prod URL) so tests can NEVER wipe
+// a remote database. global-setup also hard-refuses non-local hosts.
+const TEST_DATABASE_URL =
+  process.env.TEST_DATABASE_URL ??
+  "postgresql://tribes:tribes@localhost:5433/tribes?schema=public";
+process.env.DATABASE_URL = TEST_DATABASE_URL;
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
@@ -28,6 +36,7 @@ export default defineConfig({
     env: {
       ENABLE_DEV_LOGIN: "true",
       ADMIN_EMAILS: "dev@tribes.local",
+      DATABASE_URL: TEST_DATABASE_URL,
     },
   },
 });

@@ -12,7 +12,13 @@ export interface NormalizedMatch {
   awayTeam: string;
   homeCrest?: string | null;
   awayCrest?: string | null;
+  homeCode?: string | null;
+  awayCode?: string | null;
   groupName?: string | null;
+  venue?: string | null;
+  city?: string | null;
+  country?: string | null;
+  venueCapacity?: number | null;
   kickoffTime: string; // ISO 8601
   status: MatchStatus;
   stage: Stage;

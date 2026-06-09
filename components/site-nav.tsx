@@ -27,6 +27,9 @@ export function SiteNav({
               <Link href="/predict" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 Predict
               </Link>
+              <Link href="/groups" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                Groups
+              </Link>
               <Link href="/leagues" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 Leagues
               </Link>

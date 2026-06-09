@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, Lock, Check, Clock } from "lucide-react";
+import { Minus, Plus, Lock, Check, Clock, MapPin } from "lucide-react";
+import { useMounted } from "@/components/use-mounted";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -91,14 +92,18 @@ export function MatchPrediction({
   const locked = !match.teamsKnown || isLocked({ kickoffTime: match.kickoffTime });
   const canPredict = match.teamsKnown && !locked && !finished;
 
-  const kickoff = new Date(match.kickoffTime);
-  const kickoffLabel = kickoff.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // Format kickoff in the viewer's local timezone, mount-gated to avoid an
+  // SSR/hydration mismatch (server renders in UTC otherwise).
+  const mounted = useMounted();
+  const kickoffLabel = mounted
+    ? new Date(match.kickoffTime).toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
   return (
     <Card
@@ -114,9 +119,23 @@ export function MatchPrediction({
           )}
         </span>
         <span className="flex items-center gap-1">
-          <Clock className="h-3 w-3" /> {kickoffLabel}
+          <Clock className="h-3 w-3" />
+          <span suppressHydrationWarning>{kickoffLabel || "\u00a0"}</span>
         </span>
       </div>
+
+      {(match.venue || match.city) && (
+        <div className="-mt-2 flex items-center gap-1 text-xs text-muted">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="truncate">
+            {match.venue ? `${match.venue}, ` : ""}
+            {match.city}
+            {match.venueCapacity
+              ? ` · ${match.venueCapacity.toLocaleString()} seats`
+              : ""}
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex flex-col items-center gap-1 text-center">
