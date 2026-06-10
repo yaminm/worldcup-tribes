@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { buttonVariants } from "@/components/ui/button";
+import { MobileMenu } from "@/components/mobile-menu";
 import type { SessionUser } from "@/lib/session";
 
 export function SiteNav({
@@ -21,7 +22,7 @@ export function SiteNav({
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1 text-sm">
+        <nav className="hidden items-center gap-1 text-sm lg:flex">
           {user ? (
             <>
               <Link href="/predict" className={buttonVariants({ variant: "ghost", size: "sm" })}>
@@ -84,6 +85,10 @@ export function SiteNav({
             </>
           )}
         </nav>
+
+        <div className="lg:hidden">
+          <MobileMenu user={user} isAdmin={isAdmin} />
+        </div>
       </div>
     </header>
   );
