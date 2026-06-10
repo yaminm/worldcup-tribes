@@ -106,4 +106,16 @@ test.describe("Groups", () => {
     await expect(page.getByText("Group F")).toBeVisible();
     await expect(page.getByText("France").first()).toBeVisible();
   });
+
+  test("a user can predict a group's finishing order", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    await page.goto("/groups");
+
+    const card = page.getByTestId("group-Group A");
+    await expect(card).toBeVisible();
+    await card.locator("select").nth(0).selectOption("Mexico");
+    await card.locator("select").nth(1).selectOption("Croatia");
+    await card.getByRole("button", { name: /save order|update order/i }).click();
+    await expect(card.getByText("Saved")).toBeVisible();
+  });
 });

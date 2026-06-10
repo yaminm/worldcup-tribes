@@ -35,18 +35,20 @@ describe("computeProfileStats", () => {
     expect(s.avgPoints).toBe(5);
   });
 
-  it("splits group vs knockout points and adds outrights + bracket", () => {
+  it("splits group vs knockout points and adds outrights + bracket + group order", () => {
     const s = computeProfileStats(
       [P(20, true, "GROUP", true), P(6, false, "KNOCKOUT")],
       10,
       8,
+      5,
     );
     expect(s.groupPoints).toBe(20);
     expect(s.knockoutPoints).toBe(6);
     expect(s.matchPoints).toBe(26);
     expect(s.outrightPoints).toBe(10);
     expect(s.advancementPoints).toBe(8);
-    expect(s.totalPoints).toBe(44);
+    expect(s.groupOrderPoints).toBe(5);
+    expect(s.totalPoints).toBe(49);
     expect(s.jokersUsed).toBe(1);
   });
 });

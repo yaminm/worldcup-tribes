@@ -39,6 +39,22 @@ function pickSide(strategy: string, home: string, away: string): "HOME" | "AWAY"
   return Math.random() < 0.5 ? "HOME" : "AWAY";
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function groupOrder(strategy: string, teams: string[]): string[] {
+  if (strategy === "ANALYST") {
+    return [...teams].sort((a, b) => teamRating(b) - teamRating(a));
+  }
+  return shuffle(teams);
+}
+
 function outrightAnswer(
   strategy: string,
   type: "TEAM" | "TEXT",
@@ -102,6 +118,21 @@ export async function generateBotPredictions(): Promise<{ created: number }> {
   ]);
   const teams = [...new Set(groupMatches.flatMap((m) => [m.homeTeam, m.awayTeam]))];
 
+  // Per-group team sets + first kickoff (for group-order predictions).
+  const groupRows = await prisma.match.findMany({
+    where: { stage: "GROUP", teamsKnown: true },
+    select: { groupName: true, homeTeam: true, awayTeam: true, kickoffTime: true },
+  });
+  const groupInfo = new Map<string, { teams: Set<string>; first: Date }>();
+  for (const r of groupRows) {
+    const key = r.groupName ?? "Group";
+    const info = groupInfo.get(key) ?? { teams: new Set<string>(), first: r.kickoffTime };
+    info.teams.add(r.homeTeam);
+    info.teams.add(r.awayTeam);
+    if (r.kickoffTime < info.first) info.first = r.kickoffTime;
+    groupInfo.set(key, info);
+  }
+
   let created = 0;
   for (const bot of bots) {
     const strategy = bot.botStrategy ?? "MONKEY";
@@ -136,6 +167,18 @@ export async function generateBotPredictions(): Promise<{ created: number }> {
       if (existing) continue;
       await prisma.outrightPrediction.create({
         data: { userId: bot.id, outrightId: o.id, answer: outrightAnswer(strategy, o.type, teams) },
+      });
+    }
+
+    for (const [groupName, info] of groupInfo) {
+      if (info.first.getTime() <= Date.now()) continue; // locked
+      const existing = await prisma.groupPrediction.findUnique({
+        where: { userId_groupName: { userId: bot.id, groupName } },
+        select: { id: true },
+      });
+      if (existing) continue;
+      await prisma.groupPrediction.create({
+        data: { userId: bot.id, groupName, order: groupOrder(strategy, [...info.teams]) },
       });
     }
   }

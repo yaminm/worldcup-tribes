@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncMatches } from "@/lib/matches/sync";
 import { generateBotPredictions } from "@/lib/bots";
+import { scoreGroupPredictions } from "@/lib/group-predict-service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,6 +19,7 @@ async function handle(req: NextRequest) {
   }
   try {
     const result = await syncMatches();
+    await scoreGroupPredictions();
     const bots = await generateBotPredictions();
     return NextResponse.json({ ok: true, ...result, botPicks: bots.created });
   } catch (err) {

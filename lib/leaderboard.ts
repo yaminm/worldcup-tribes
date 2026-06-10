@@ -36,7 +36,7 @@ async function buildLeaderboard(users: LbUser[]): Promise<LeaderboardRow[]> {
       const exactHits = preds.filter((p) => p.isExact).length;
       const submittedTimes = preds.map((p) => p.submittedAt.getTime());
 
-      const [outrightAgg, advancementAgg] = await Promise.all([
+      const [outrightAgg, advancementAgg, groupAgg] = await Promise.all([
         prisma.outrightPrediction.aggregate({
           where: { userId: u.id },
           _sum: { points: true },
@@ -45,11 +45,16 @@ async function buildLeaderboard(users: LbUser[]): Promise<LeaderboardRow[]> {
           where: { userId: u.id },
           _sum: { points: true },
         }),
+        prisma.groupPrediction.aggregate({
+          where: { userId: u.id },
+          _sum: { points: true },
+        }),
       ]);
       const points =
         matchPoints +
         (outrightAgg._sum.points ?? 0) +
-        (advancementAgg._sum.points ?? 0);
+        (advancementAgg._sum.points ?? 0) +
+        (groupAgg._sum.points ?? 0);
 
       return {
         userId: u.id,
@@ -91,6 +96,7 @@ export async function getGlobalLeaderboard(): Promise<LeaderboardRow[]> {
         { predictions: { some: {} } },
         { outrightPredictions: { some: {} } },
         { advancementPicks: { some: {} } },
+        { groupPredictions: { some: {} } },
       ],
     },
   });

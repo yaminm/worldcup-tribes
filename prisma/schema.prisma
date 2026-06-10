@@ -50,6 +50,7 @@ model User {
   predictions         Prediction[]
   outrightPredictions OutrightPrediction[]
   advancementPicks    AdvancementPick[]
+  groupPredictions    GroupPrediction[]
   memberships         LeagueMember[]
   administered        League[]             @relation("LeagueAdmin")
 }
@@ -164,6 +165,21 @@ model AdvancementPick {
 
   @@unique([userId, matchId])
   @@index([matchId])
+}
+
+// Predicted final order (1st..4th) of a group's four teams.
+model GroupPrediction {
+  id          String    @id @default(cuid())
+  userId      String
+  groupName   String
+  order       String[]
+  points      Int?
+  scoredAt    DateTime?
+  submittedAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupName])
 }
 
 // Tournament-long "outright" questions (champion, Golden Boot, ...).

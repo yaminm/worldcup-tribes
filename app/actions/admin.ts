@@ -8,6 +8,7 @@ import { syncMatches } from "@/lib/matches/sync";
 import { recalcAll, scoreMatch } from "@/lib/scoring-service";
 import { scoreOutright } from "@/lib/outright-service";
 import { generateBotPredictions } from "@/lib/bots";
+import { scoreGroupPredictions } from "@/lib/group-predict-service";
 
 export interface AdminState {
   ok?: boolean;
@@ -50,8 +51,12 @@ export async function recalcAction(
 ): Promise<AdminState> {
   await requireSuperadmin();
   const r = await recalcAll();
+  const g = await scoreGroupPredictions();
   revalidatePath("/admin");
-  return { ok: true, message: `Recalculated ${r.matches} matches, ${r.scored} predictions` };
+  return {
+    ok: true,
+    message: `Recalculated ${r.matches} matches, ${r.scored} predictions, ${g.scored} group orders`,
+  };
 }
 
 const resultSchema = z.object({

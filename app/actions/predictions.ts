@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { isPredictable } from "@/lib/locking";
 import { JOKERS_PER_STAGE } from "@/lib/joker";
+import { isGroupLocked, isValidOrder } from "@/lib/group-predict";
 
 export interface PredictionState {
   ok?: boolean;
@@ -53,6 +54,45 @@ export async function submitPrediction(
   });
 
   revalidatePath("/predict");
+  return { ok: true };
+}
+
+export async function submitGroupPrediction(
+  _prev: PredictionState,
+  formData: FormData,
+): Promise<PredictionState> {
+  const user = await requireUser();
+  const groupName = String(formData.get("groupName") ?? "");
+  // Collect pos1, pos2, ... in numeric order (groups may have any team count).
+  const order = [...formData.entries()]
+    .filter(([k]) => /^pos\d+$/.test(k))
+    .sort((a, b) => Number(a[0].slice(3)) - Number(b[0].slice(3)))
+    .map(([, v]) => String(v));
+  if (!groupName) return { error: "Group not found" };
+
+  const matches = await prisma.match.findMany({
+    where: { stage: "GROUP", groupName },
+    orderBy: { kickoffTime: "asc" },
+  });
+  if (matches.length === 0) return { error: "Group not found" };
+
+  const teams = [
+    ...new Set(matches.flatMap((m) => [m.homeTeam, m.awayTeam])),
+  ];
+  if (!isValidOrder(order, teams)) {
+    return { error: "Rank all four teams, each once" };
+  }
+  if (isGroupLocked(matches[0].kickoffTime)) {
+    return { error: "This group is locked" };
+  }
+
+  await prisma.groupPrediction.upsert({
+    where: { userId_groupName: { userId: user.id, groupName } },
+    update: { order, submittedAt: new Date() },
+    create: { userId: user.id, groupName, order },
+  });
+
+  revalidatePath("/groups");
   return { ok: true };
 }
 
