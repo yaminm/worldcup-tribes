@@ -6,6 +6,7 @@ import {
   SyncControls,
   AdminResultForm,
   AdminOutrightForm,
+  SimulatorControls,
 } from "@/components/admin-controls";
 
 export default async function AdminPage() {
@@ -18,7 +19,8 @@ export default async function AdminPage() {
 
   const provider = process.env.FOOTBALL_DATA_API_TOKEN
     ? "football-data.org"
-    : "bundled JSON fixtures";
+    : "openfootball";
+  const simulatorEnabled = process.env.ENABLE_SIMULATOR === "true";
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,6 +28,19 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-extrabold tracking-tight">Admin</h1>
         <p className="text-muted">Match data source: {provider}</p>
       </div>
+
+      {simulatorEnabled && (
+        <Card className="flex flex-col gap-3 border-warning/40">
+          <CardTitle>Simulator (testing only)</CardTitle>
+          <CardDescription>
+            Fast-forward the tournament to verify locking, results and scoring.
+            &quot;Kick off&quot; sets matches LIVE now (locking predictions);
+            &quot;Finish&quot; assigns random results and scores them. Run a Sync to
+            reset back to the real schedule.
+          </CardDescription>
+          <SimulatorControls />
+        </Card>
+      )}
 
       <Card className="flex flex-col gap-3">
         <CardTitle>Sync &amp; scoring</CardTitle>

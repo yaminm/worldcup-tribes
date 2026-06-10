@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { RefreshCw, Calculator, Bot } from "lucide-react";
+import { RefreshCw, Calculator, Bot, Play, FlagTriangleRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,6 +10,8 @@ import {
   generateBotsAction,
   setResultAction,
   setOutrightAnswerAction,
+  simulateKickoffAction,
+  simulateResultsAction,
   type AdminState,
 } from "@/app/actions/admin";
 import type { MatchView } from "@/lib/match-view";
@@ -100,6 +102,45 @@ export function SyncControls() {
       {(botState.message || botState.error) && (
         <p className={botState.error ? "text-sm text-danger" : "text-sm text-success"}>
           {botState.error ?? botState.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function SimulatorControls() {
+  const [kickState, kickAction, kicking] = useActionState<AdminState, FormData>(
+    simulateKickoffAction,
+    {},
+  );
+  const [resState, resAction, finishing] = useActionState<AdminState, FormData>(
+    simulateResultsAction,
+    {},
+  );
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <form action={kickAction}>
+          <Button type="submit" variant="secondary" disabled={kicking}>
+            <Play className="h-4 w-4" />
+            {kicking ? "Kicking off…" : "Kick off next 4 (lock)"}
+          </Button>
+        </form>
+        <form action={resAction}>
+          <Button type="submit" variant="secondary" disabled={finishing}>
+            <FlagTriangleRight className="h-4 w-4" />
+            {finishing ? "Finishing…" : "Finish live + score"}
+          </Button>
+        </form>
+      </div>
+      {(kickState.message || kickState.error) && (
+        <p className={kickState.error ? "text-sm text-danger" : "text-sm text-success"}>
+          {kickState.error ?? kickState.message}
+        </p>
+      )}
+      {(resState.message || resState.error) && (
+        <p className={resState.error ? "text-sm text-danger" : "text-sm text-success"}>
+          {resState.error ?? resState.message}
         </p>
       )}
     </div>

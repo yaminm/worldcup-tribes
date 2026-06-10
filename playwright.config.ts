@@ -36,6 +36,7 @@ export default defineConfig({
     env: {
       ENABLE_DEV_LOGIN: "true",
       ADMIN_EMAILS: "dev@tribes.local",
+      ENABLE_SIMULATOR: "true",
       DATABASE_URL: TEST_DATABASE_URL,
     },
   },

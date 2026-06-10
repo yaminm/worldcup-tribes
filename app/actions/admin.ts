@@ -9,6 +9,39 @@ import { recalcAll, scoreMatch } from "@/lib/scoring-service";
 import { scoreOutright } from "@/lib/outright-service";
 import { generateBotPredictions } from "@/lib/bots";
 import { scoreGroupPredictions } from "@/lib/group-predict-service";
+import { simulateKickoff, simulateResults } from "@/lib/simulate";
+
+function simulatorEnabled(): boolean {
+  return process.env.ENABLE_SIMULATOR === "true";
+}
+
+function revalidateAll() {
+  for (const p of ["/", "/admin", "/predict", "/bracket", "/groups", "/leaderboard", "/leagues"]) {
+    revalidatePath(p);
+  }
+}
+
+export async function simulateKickoffAction(
+  _prev: AdminState,
+  _formData: FormData,
+): Promise<AdminState> {
+  await requireSuperadmin();
+  if (!simulatorEnabled()) return { error: "Simulator is disabled (set ENABLE_SIMULATOR=true)" };
+  const n = await simulateKickoff(4);
+  revalidateAll();
+  return { ok: true, message: `Kicked off ${n} matches — predictions now locked` };
+}
+
+export async function simulateResultsAction(
+  _prev: AdminState,
+  _formData: FormData,
+): Promise<AdminState> {
+  await requireSuperadmin();
+  if (!simulatorEnabled()) return { error: "Simulator is disabled (set ENABLE_SIMULATOR=true)" };
+  const n = await simulateResults();
+  revalidateAll();
+  return { ok: true, message: `Finished + scored ${n} live matches` };
+}
 
 export interface AdminState {
   ok?: boolean;
