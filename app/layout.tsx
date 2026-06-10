@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteNav } from "@/components/site-nav";
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { getCurrentUser } from "@/lib/session";
 import { isSuperadmin } from "@/lib/admin";
 
@@ -26,6 +27,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <AnnouncementBanner />
         <SiteNav user={user} isAdmin={isAdmin} />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}

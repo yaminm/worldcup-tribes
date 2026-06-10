@@ -10,6 +10,12 @@ test.describe("Docs", () => {
     await expect(page.getByText("Knockout bracket")).toBeVisible();
   });
 
+  test("whats-new page renders the Hebrew update", async ({ page }) => {
+    await page.goto("/whats-new");
+    await expect(page.getByRole("heading", { name: /עדכון חדש/ })).toBeVisible();
+    await expect(page.getByText(/יריבים אוטומטיים/)).toBeVisible();
+  });
+
   test("llms.txt is served as plain text", async ({ page }) => {
     const res = await page.request.get("/llms.txt");
     expect(res.status()).toBe(200);
