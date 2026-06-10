@@ -39,41 +39,43 @@ export default async function Image({
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <div style={{ width: 22, height: 22, borderRadius: 9999, background: "#c6ff3a" }} />
           <div style={{ fontSize: 30, letterSpacing: 2, color: "#8a93a6" }}>
-            TRIBES · WORLD CUP 2026 PREDICTION LEAGUE
+            TRIBES · WORLD CUP 2026 PREDICTOR
           </div>
         </div>
 
-        <div style={{ display: "flex", fontSize: 36, marginTop: 40, color: "#8a93a6" }}>
-          You&apos;re invited to
+        <div style={{ display: "flex", fontSize: 44, marginTop: 40, color: "#8a93a6" }}>
+          Think you can beat me in
         </div>
         <div
           style={{
             display: "flex",
-            fontSize: 96,
+            fontSize: 104,
             fontWeight: 800,
             letterSpacing: -3,
-            marginTop: 6,
-            lineHeight: 1.05,
+            marginTop: 4,
+            lineHeight: 1.02,
+            color: "#c6ff3a",
           }}
         >
-          {name}
+          {name}?
         </div>
 
-        <div style={{ display: "flex", gap: "14px", marginTop: 40, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "16px", marginTop: 44, alignItems: "center" }}>
           <div
             style={{
               display: "flex",
-              border: "1px solid #262c38",
-              borderRadius: 14,
-              padding: "12px 22px",
-              fontSize: 30,
-              color: "#c6ff3a",
+              background: "#c6ff3a",
+              color: "#0a0c10",
+              borderRadius: 9999,
+              padding: "16px 34px",
+              fontSize: 34,
+              fontWeight: 700,
             }}
           >
-            {members} member{members === 1 ? "" : "s"}
+            Join now →
           </div>
-          <div style={{ display: "flex", fontSize: 30, color: "#e8edf4" }}>
-            Join &amp; predict the World Cup →
+          <div style={{ display: "flex", fontSize: 28, color: "#8a93a6" }}>
+            {members} already playing
           </div>
         </div>
       </div>

@@ -22,12 +22,13 @@ export async function generateMetadata({
     select: { name: true },
   });
   const name = league?.name ?? "League";
-  const description = `Join "${name}" and predict the World Cup 2026 against your friends.`;
+  const cta = `Think you can beat me in ${name}?`;
+  const description = "Join my World Cup 2026 prediction league on Tribes — and prove it.";
   return {
     title: name,
     description,
-    openGraph: { title: `${name} · Tribes`, description },
-    twitter: { title: `${name} · Tribes`, description },
+    openGraph: { title: cta, description },
+    twitter: { title: cta, description },
   };
 }
 
