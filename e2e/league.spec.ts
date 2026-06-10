@@ -22,7 +22,7 @@ test.describe("Leagues", () => {
     await devLogin(page, "linkjoiner@tribes.local", "Link Joiner");
     await page.goto("/join/DEMO01");
     await expect(page).toHaveURL(/\/leagues\/.+/);
-    await expect(page.getByText("Demo Tribe")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Demo Tribe" })).toBeVisible();
   });
 
   test("an invite link sends signed-out users to login first", async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe("Leagues", () => {
     await page.getByRole("button", { name: /join league/i }).click();
 
     await expect(page).toHaveURL(/\/leagues\/.+/);
-    await expect(page.getByText("Demo Tribe")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Demo Tribe" })).toBeVisible();
     // Seeded members are visible on the leaderboard.
     await expect(page.getByText("Dev Player")).toBeVisible();
     await expect(page.getByText("Rival Riley")).toBeVisible();

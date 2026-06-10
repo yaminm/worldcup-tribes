@@ -4,13 +4,68 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { isPredictable } from "@/lib/locking";
+import { isPredictable, LOCK_WINDOW_MS } from "@/lib/locking";
 import { JOKERS_PER_STAGE } from "@/lib/joker";
 import { isGroupLocked, isValidOrder } from "@/lib/group-predict";
 
 export interface PredictionState {
   ok?: boolean;
   error?: string;
+  filled?: number;
+}
+
+/** Weighted-random goal count (mostly 0–3) for the LazyOz autofill. */
+function randomGoals(): number {
+  const r = Math.random();
+  if (r < 0.3) return 0;
+  if (r < 0.62) return 1;
+  if (r < 0.85) return 2;
+  return 3;
+}
+
+/**
+ * LazyOz: one-click random predictions for every open match the user hasn't
+ * already predicted. Never overwrites existing picks.
+ */
+export async function lazyFill(
+  _prev: PredictionState,
+  _formData: FormData,
+): Promise<PredictionState> {
+  const user = await requireUser();
+  const lockCutoff = new Date(Date.now() + LOCK_WINDOW_MS);
+
+  const open = await prisma.match.findMany({
+    where: { teamsKnown: true, status: "SCHEDULED", kickoffTime: { gt: lockCutoff } },
+    select: { id: true },
+  });
+  const ids = open.map((m) => m.id);
+  if (ids.length === 0) return { ok: true, filled: 0 };
+
+  const existing = new Set(
+    (
+      await prisma.prediction.findMany({
+        where: { userId: user.id, matchId: { in: ids } },
+        select: { matchId: true },
+      })
+    ).map((p) => p.matchId),
+  );
+
+  const toCreate = ids
+    .filter((id) => !existing.has(id))
+    .map((id) => ({
+      userId: user.id,
+      matchId: id,
+      homePredictedScore: randomGoals(),
+      awayPredictedScore: randomGoals(),
+    }));
+
+  if (toCreate.length > 0) {
+    await prisma.prediction.createMany({ data: toCreate, skipDuplicates: true });
+  }
+
+  revalidatePath("/predict");
+  revalidatePath("/");
+  return { ok: true, filled: toCreate.length };
 }
 
 const schema = z.object({

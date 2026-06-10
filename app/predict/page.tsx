@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/session";
 import { MatchList } from "@/components/match-list";
 import { jokersRemaining } from "@/lib/joker";
 import { Badge } from "@/components/ui/badge";
+import { LazyOzButton } from "@/components/lazy-oz-button";
 
 export default async function PredictPage() {
   const user = await requireUser();
@@ -34,10 +35,13 @@ export default async function PredictPage() {
             Lock in a scoreline up to 5 minutes before kickoff.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-muted">Jokers left</span>
-          <Badge variant="accent">Group {jokersRemaining("GROUP", groupJokers)}</Badge>
-          <Badge variant="accent">KO {jokersRemaining("KNOCKOUT", koJokers)}</Badge>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted">Jokers left</span>
+            <Badge variant="accent">Group {jokersRemaining("GROUP", groupJokers)}</Badge>
+            <Badge variant="accent">KO {jokersRemaining("KNOCKOUT", koJokers)}</Badge>
+          </div>
+          <LazyOzButton />
         </div>
       </div>
 
