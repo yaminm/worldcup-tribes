@@ -41,6 +41,8 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  isBot         Boolean   @default(false)
+  botStrategy   String?
   createdAt     DateTime  @default(now())
 
   accounts            Account[]

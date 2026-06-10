@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { RefreshCw, Calculator } from "lucide-react";
+import { RefreshCw, Calculator, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   runSyncAction,
   recalcAction,
+  generateBotsAction,
   setResultAction,
   setOutrightAnswerAction,
   type AdminState,
@@ -59,6 +60,10 @@ export function SyncControls() {
     AdminState,
     FormData
   >(recalcAction, {});
+  const [botState, botDispatch, botRunning] = useActionState<AdminState, FormData>(
+    generateBotsAction,
+    {},
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -75,6 +80,12 @@ export function SyncControls() {
             {recalcing ? "Recalculating…" : "Recalculate scores"}
           </Button>
         </form>
+        <form action={botDispatch}>
+          <Button type="submit" variant="secondary" disabled={botRunning}>
+            <Bot className="h-4 w-4" />
+            {botRunning ? "Generating…" : "Generate bot picks"}
+          </Button>
+        </form>
       </div>
       {(syncState.message || syncState.error) && (
         <p className={syncState.error ? "text-sm text-danger" : "text-sm text-success"}>
@@ -84,6 +95,11 @@ export function SyncControls() {
       {(recalcState.message || recalcState.error) && (
         <p className={recalcState.error ? "text-sm text-danger" : "text-sm text-success"}>
           {recalcState.error ?? recalcState.message}
+        </p>
+      )}
+      {(botState.message || botState.error) && (
+        <p className={botState.error ? "text-sm text-danger" : "text-sm text-success"}>
+          {botState.error ?? botState.message}
         </p>
       )}
     </div>

@@ -46,6 +46,9 @@ test.describe("Leagues", () => {
     ).toBeVisible();
     await expect(page.locator("table").getByText("Dev Player")).toBeVisible();
     await expect(page.locator("table").getByText("Rival Riley")).toBeVisible();
+    // Bot participants compete too.
+    await expect(page.locator("table").getByText(/The Analyst/)).toBeVisible();
+    await expect(page.locator("table").getByText(/Coco the Monkey/)).toBeVisible();
   });
 
   test("a user can join the seeded league with its code", async ({ page }) => {

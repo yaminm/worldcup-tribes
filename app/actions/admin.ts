@@ -7,6 +7,7 @@ import { requireSuperadmin } from "@/lib/session";
 import { syncMatches } from "@/lib/matches/sync";
 import { recalcAll, scoreMatch } from "@/lib/scoring-service";
 import { scoreOutright } from "@/lib/outright-service";
+import { generateBotPredictions } from "@/lib/bots";
 
 export interface AdminState {
   ok?: boolean;
@@ -30,6 +31,17 @@ export async function runSyncAction(
   } catch (err) {
     return { error: (err as Error).message };
   }
+}
+
+export async function generateBotsAction(
+  _prev: AdminState,
+  _formData: FormData,
+): Promise<AdminState> {
+  await requireSuperadmin();
+  const r = await generateBotPredictions();
+  revalidatePath("/admin");
+  revalidatePath("/leaderboard");
+  return { ok: true, message: `Generated ${r.created} bot predictions` };
 }
 
 export async function recalcAction(

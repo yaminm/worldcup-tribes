@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { generateInviteCode, normalizeInviteCode } from "@/lib/invite";
+import { addBotsToLeague } from "@/lib/bots";
 
 export interface FormState {
   error?: string;
@@ -46,6 +47,9 @@ export async function createLeague(
       members: { create: { userId: user.id } },
     },
   });
+
+  // Bots compete in every league for fun.
+  await addBotsToLeague(league.id);
 
   revalidatePath("/leagues");
   redirect(`/leagues/${league.id}`);

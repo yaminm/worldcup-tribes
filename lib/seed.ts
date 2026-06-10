@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { scoreMatch } from "@/lib/scoring-service";
 import { scoreOutright } from "@/lib/outright-service";
+import { generateBotPredictions } from "@/lib/bots";
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   // Order matters for FK constraints.
@@ -234,4 +235,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<void> {
   await scoreMatch(finishedGroup.id);
   await scoreMatch(finishedKO.id);
   await scoreOutright(resolvedOutright.id);
+
+  // Bot participants (Coco the Monkey + The Analyst) join and predict.
+  await generateBotPredictions();
 }
