@@ -12,19 +12,24 @@ export function LazyOzButton() {
   );
 
   return (
-    <form action={action} className="flex items-center gap-2">
-      <Button type="submit" variant="secondary" size="sm" disabled={pending}>
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <Button
+        type="submit"
+        variant="secondary"
+        size="sm"
+        disabled={pending}
+        title="Randomly predicts every open match (and knockout pick) you haven't filled in yet. Won't touch picks you already made."
+      >
         <Dices className="h-4 w-4" />
-        {pending ? "Filling…" : "LazyOz: autofill"}
+        {pending ? "Filling…" : "LazyOz — auto-fill my picks"}
       </Button>
-      {state?.ok &&
-        (state.filled && state.filled > 0 ? (
-          <span className="text-xs text-success">
-            Filled {state.filled} pick{state.filled === 1 ? "" : "s"} 🎲
-          </span>
-        ) : (
-          <span className="text-xs text-muted">Nothing left to fill</span>
-        ))}
+      <span className="text-xs text-muted">
+        {state?.ok
+          ? state.filled && state.filled > 0
+            ? `Filled ${state.filled} random pick${state.filled === 1 ? "" : "s"} 🎲`
+            : "You're already fully predicted ✅"
+          : "One click: random picks for every game you haven't filled"}
+      </span>
     </form>
   );
 }

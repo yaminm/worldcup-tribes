@@ -101,6 +101,16 @@ export const RULES: RuleSection[] = [
     ],
   },
   {
+    id: "lazyoz",
+    title: "LazyOz — one-click autofill",
+    summary: "No time to pick every game? Let LazyOz do it in one click.",
+    items: [
+      "Fills random predictions for every open match (and knockout pick) you haven't made",
+      "Never overwrites picks you already made — it only fills the gaps",
+      "Find it on the home page and on Predict; refine any pick afterwards",
+    ],
+  },
+  {
     id: "leagues",
     title: "Leagues",
     summary: "Play privately with friends or against the world.",

@@ -44,8 +44,8 @@ test.describe("Predictions", () => {
   test("LazyOz autofills the matches you haven't predicted", async ({ page }) => {
     await devLogin(page, "lazyoz@tribes.local", "Lazy Oz");
     await page.goto("/predict");
-    await page.getByRole("button", { name: /lazyoz: autofill/i }).click();
-    await expect(page.getByText(/Filled \d+ pick/)).toBeVisible();
+    await page.getByRole("button", { name: /lazyoz/i }).click();
+    await expect(page.getByText(/Filled \d+ random pick/)).toBeVisible();
     // An open match now has a saved pick (button reads "Update").
     const card = page.getByTestId("match-Mexico-Croatia");
     await expect(card.getByRole("button", { name: /^update$/i })).toBeVisible();
