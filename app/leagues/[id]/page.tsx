@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -9,6 +10,26 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { InviteShare } from "@/components/invite-share";
 import { LeaderboardTable } from "@/components/leaderboard-table";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const league = await prisma.league.findUnique({
+    where: { id },
+    select: { name: true },
+  });
+  const name = league?.name ?? "League";
+  const description = `Join "${name}" and predict the World Cup 2026 against your friends.`;
+  return {
+    title: name,
+    description,
+    openGraph: { title: `${name} · Tribes`, description },
+    twitter: { title: `${name} · Tribes`, description },
+  };
+}
 
 export default async function LeaguePage({
   params,
