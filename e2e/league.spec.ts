@@ -30,6 +30,14 @@ test.describe("Leagues", () => {
     await expect(page).toHaveURL(/\/login\?callbackUrl=/);
   });
 
+  test("the dashboard shows the next match, stats, and recent results", async ({ page }) => {
+    await devLogin(page, "dev@tribes.local", "Dev Player");
+    // devLogin lands on the dashboard (/).
+    await expect(page.getByText("Total points")).toBeVisible();
+    await expect(page.getByText("Global rank")).toBeVisible();
+    await expect(page.getByText("Recent results")).toBeVisible();
+  });
+
   test("the profile page shows player stats", async ({ page }) => {
     await devLogin(page, "dev@tribes.local", "Dev Player");
     await page.goto("/profile");

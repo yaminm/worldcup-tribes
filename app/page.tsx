@@ -3,9 +3,14 @@ import { Target, Trophy, Users, Zap } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { LOCK_WINDOW_MS } from "@/lib/locking";
+import { getGlobalLeaderboard } from "@/lib/leaderboard";
+import { toMatchView, toPredictionView } from "@/lib/match-view";
+import { teamFlag } from "@/lib/teams";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { MatchList } from "@/components/match-list";
+import { NextMatchHero } from "@/components/next-match-hero";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -13,26 +18,47 @@ export default async function HomePage() {
 
   const now = new Date();
   const lockCutoff = new Date(now.getTime() + LOCK_WINDOW_MS);
+  const withMyPred = { predictions: { where: { userId: user.id } } } as const;
 
-  const [memberships, openMatches] = await Promise.all([
-    prisma.leagueMember.findMany({
-      where: { userId: user.id },
-      include: { league: { include: { _count: { select: { members: true } } } } },
-      orderBy: { joinedAt: "desc" },
-    }),
-    prisma.match.findMany({
-      where: {
-        teamsKnown: true,
-        status: { not: "FINISHED" },
-        kickoffTime: { gt: lockCutoff },
-      },
-      orderBy: { kickoffTime: "asc" },
-      take: 10,
-      include: { predictions: { where: { userId: user.id } } },
-    }),
-  ]);
+  const [memberships, openMatches, liveMatch, nextMatch, recentFinished, board] =
+    await Promise.all([
+      prisma.leagueMember.findMany({
+        where: { userId: user.id },
+        include: { league: { include: { _count: { select: { members: true } } } } },
+        orderBy: { joinedAt: "desc" },
+      }),
+      prisma.match.findMany({
+        where: {
+          teamsKnown: true,
+          status: { not: "FINISHED" },
+          kickoffTime: { gt: lockCutoff },
+        },
+        orderBy: { kickoffTime: "asc" },
+        take: 10,
+        include: withMyPred,
+      }),
+      prisma.match.findFirst({
+        where: { status: "LIVE" },
+        orderBy: { kickoffTime: "asc" },
+        include: withMyPred,
+      }),
+      prisma.match.findFirst({
+        where: { status: "SCHEDULED", teamsKnown: true, kickoffTime: { gt: now } },
+        orderBy: { kickoffTime: "asc" },
+        include: withMyPred,
+      }),
+      prisma.match.findMany({
+        where: { status: "FINISHED" },
+        orderBy: { kickoffTime: "desc" },
+        take: 4,
+        include: withMyPred,
+      }),
+      getGlobalLeaderboard(),
+    ]);
 
   const unpredicted = openMatches.filter((m) => m.predictions.length === 0);
+  const hero = liveMatch ?? nextMatch;
+  const myRow = board.find((r) => r.userId === user.id);
 
   return (
     <div className="flex flex-col gap-8">
@@ -50,6 +76,23 @@ export default async function HomePage() {
         <Link href="/leagues" className={buttonVariants({ variant: "secondary" })}>
           My leagues
         </Link>
+      </div>
+
+      {hero && (
+        <NextMatchHero
+          match={toMatchView(hero)}
+          prediction={toPredictionView(hero.predictions[0] ?? null)}
+        />
+      )}
+
+      <div className="grid grid-cols-3 gap-3">
+        <StatTile label="Total points" value={myRow?.points ?? 0} />
+        <StatTile
+          label="Global rank"
+          value={myRow ? `#${myRow.rank}` : "—"}
+          hint={`of ${board.length}`}
+        />
+        <StatTile label="Exact scores" value={myRow?.exactHits ?? 0} />
       </div>
 
       {memberships.length === 0 && (
@@ -85,7 +128,56 @@ export default async function HomePage() {
           <p className="text-sm text-muted">No open matches need a prediction right now.</p>
         )}
       </section>
+
+      {recentFinished.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-bold">Recent results</h2>
+          <Card className="flex flex-col divide-y divide-border/60 p-0">
+            {recentFinished.map((m) => {
+              const pred = m.predictions[0] ?? null;
+              return (
+                <div key={m.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                  <span className="flex items-center gap-2 truncate">
+                    <span>{teamFlag(m.homeTeam)}</span>
+                    <span className="truncate">{m.homeTeam}</span>
+                    <span className="score-display font-semibold">
+                      {m.homeScore}–{m.awayScore}
+                    </span>
+                    <span className="truncate">{m.awayTeam}</span>
+                    <span>{teamFlag(m.awayTeam)}</span>
+                  </span>
+                  {pred ? (
+                    <Badge variant={pred.points ? "success" : "default"}>
+                      {pred.homePredictedScore}–{pred.awayPredictedScore} · {pred.points ?? 0} pts
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted">no pick</span>
+                  )}
+                </div>
+              );
+            })}
+          </Card>
+        </section>
+      )}
     </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+}) {
+  return (
+    <Card className="flex flex-col gap-0.5">
+      <span className="text-xs uppercase tracking-wide text-muted">{label}</span>
+      <span className="score-display text-2xl sm:text-3xl">{value}</span>
+      {hint && <span className="text-xs text-muted">{hint}</span>}
+    </Card>
   );
 }
 
