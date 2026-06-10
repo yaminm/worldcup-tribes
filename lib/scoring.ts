@@ -34,6 +34,16 @@ export function outcomeOf(home: number, away: number): Outcome {
  * @param advancing which side advanced (penalties). Only meaningful for
  *        knockout matches that were level after ET. Optional.
  */
+/** Single source of truth for match scoring values (also shown on /how-it-works). */
+export const POINTS = {
+  EXACT: 10,
+  GOAL_DIFFERENCE: 6,
+  OUTCOME: 4,
+  WRONG: 0,
+} as const;
+
+export const KNOCKOUT_MULTIPLIER = 1.5;
+
 export function basePoints(
   ph: number,
   pa: number,
@@ -42,14 +52,14 @@ export function basePoints(
   advancing?: Side | null,
 ): number {
   // EXACT — uses the scoreline.
-  if (ph === ah && pa === aa) return 10;
+  if (ph === ah && pa === aa) return POINTS.EXACT;
 
   const predScoreOutcome = outcomeOf(ph, pa);
   const actualScoreOutcome = outcomeOf(ah, aa);
 
   // GOAL DIFFERENCE — uses the scoreline outcome + identical goal difference.
   if (predScoreOutcome === actualScoreOutcome && ph - pa === ah - aa) {
-    return 6;
+    return POINTS.GOAL_DIFFERENCE;
   }
 
   // OUTCOME — penalties count: the "actual winner" is who advanced when the
@@ -57,12 +67,10 @@ export function basePoints(
   const actualWinner: Outcome =
     actualScoreOutcome === "DRAW" && advancing ? advancing : actualScoreOutcome;
 
-  if (predScoreOutcome === actualWinner) return 4;
+  if (predScoreOutcome === actualWinner) return POINTS.OUTCOME;
 
-  return 0;
+  return POINTS.WRONG;
 }
-
-const KNOCKOUT_MULTIPLIER = 1.5;
 
 export interface MatchResult {
   stage: "GROUP" | "KNOCKOUT";

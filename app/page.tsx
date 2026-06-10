@@ -105,9 +105,17 @@ function Landing() {
           Predict scores, earn points for accuracy, and climb private league
           leaderboards with your friends all summer long.
         </p>
-        <Link href="/login" className={buttonVariants({ size: "lg" })}>
-          Start predicting
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link href="/login" className={buttonVariants({ size: "lg" })}>
+            Start predicting
+          </Link>
+          <Link
+            href="/how-it-works"
+            className={buttonVariants({ variant: "secondary", size: "lg" })}
+          >
+            How it works
+          </Link>
+        </div>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
