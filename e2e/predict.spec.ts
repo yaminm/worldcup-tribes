@@ -45,7 +45,7 @@ test.describe("Predictions", () => {
     await devLogin(page, "lazyoz@tribes.local", "Lazy Oz");
     await page.goto("/predict");
     await page.getByRole("button", { name: /lazyoz/i }).click();
-    await expect(page.getByText(/Filled \d+ random pick/)).toBeVisible();
+    await expect(page.getByText(/Filled \d+ pick/)).toBeVisible();
     // An open match now has a saved pick (button reads "Update").
     const card = page.getByTestId("match-Mexico-Croatia");
     await expect(card.getByRole("button", { name: /^update$/i })).toBeVisible();

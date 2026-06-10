@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Target, Trophy, Users, Zap } from "lucide-react";
+import { Target, Trophy, Users, Zap, Dices } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { LOCK_WINDOW_MS } from "@/lib/locking";
@@ -64,18 +64,15 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-2">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">
-              Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}
-            </h1>
-            <p className="text-muted">
-              {unpredicted.length > 0
-                ? `${unpredicted.length} open match${unpredicted.length === 1 ? "" : "es"} still need your call — or fill them all in one click.`
-                : "You're all caught up. Nice."}
-            </p>
-          </div>
-          <LazyOzButton />
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight">
+            Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}
+          </h1>
+          <p className="text-muted">
+            {unpredicted.length > 0
+              ? `${unpredicted.length} open match${unpredicted.length === 1 ? "" : "es"} still need your call.`
+              : "You're all caught up. Nice."}
+          </p>
         </div>
         <Link href="/leagues" className={buttonVariants({ variant: "secondary" })}>
           My leagues
@@ -116,6 +113,23 @@ export default async function HomePage() {
               Join with code
             </Link>
           </div>
+        </Card>
+      )}
+
+      {unpredicted.length > 0 && (
+        <Card className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+              <Dices className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Short on time?</CardTitle>
+              <CardDescription>
+                LazyOz fills random picks for every game you haven&apos;t predicted yet.
+              </CardDescription>
+            </div>
+          </div>
+          <LazyOzButton variant="primary" label="Auto-fill my picks" />
         </Card>
       )}
 
