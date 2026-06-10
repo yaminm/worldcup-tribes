@@ -16,6 +16,15 @@ test.describe("Docs", () => {
     await expect(page.getByText(/יריבים אוטומטיים/)).toBeVisible();
   });
 
+  test("pages expose Open Graph tags for link previews", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+      "content",
+      /Tribes/,
+    );
+    await expect(page.locator('meta[property="og:image"]')).toHaveCount(1);
+  });
+
   test("llms.txt is served as plain text", async ({ page }) => {
     const res = await page.request.get("/llms.txt");
     expect(res.status()).toBe(200);

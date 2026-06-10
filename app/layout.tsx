@@ -9,10 +9,32 @@ import { isSuperadmin } from "@/lib/admin";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://worldcup-tribes.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Tribes — World Cup 2026 Predictions",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Tribes — World Cup 2026 Predictions",
+    template: "%s · Tribes",
+  },
   description:
     "Predict every World Cup 2026 match, climb your league leaderboard, and prove you called it.",
+  applicationName: "Tribes",
+  openGraph: {
+    type: "website",
+    siteName: "Tribes",
+    url: SITE_URL,
+    title: "Tribes — World Cup 2026 Predictions",
+    description:
+      "Predict every World Cup 2026 match, climb your league leaderboard, and prove you called it.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tribes — World Cup 2026 Predictions",
+    description:
+      "Predict every World Cup 2026 match, climb your league leaderboard, and prove you called it.",
+  },
 };
 
 export default async function RootLayout({
