@@ -42,6 +42,12 @@ export function SiteNav({
               <Link href="/leaderboard" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 Global
               </Link>
+              <Link
+                href="/how-it-works"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+              >
+                How it works
+              </Link>
               {isAdmin && (
                 <Link href="/admin" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                   Admin
@@ -65,9 +71,17 @@ export function SiteNav({
               </div>
             </>
           ) : (
-            <Link href="/login" className={buttonVariants({ variant: "primary", size: "sm" })}>
-              Sign in
-            </Link>
+            <>
+              <Link
+                href="/how-it-works"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+              >
+                How it works
+              </Link>
+              <Link href="/login" className={buttonVariants({ variant: "primary", size: "sm" })}>
+                Sign in
+              </Link>
+            </>
           )}
         </nav>
       </div>
