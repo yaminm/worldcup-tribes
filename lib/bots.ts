@@ -103,26 +103,40 @@ export async function generateBotPredictions(): Promise<{ created: number }> {
 
   // Keep bots in every league so they show on league leaderboards.
   const leagues = await prisma.league.findMany({ select: { id: true } });
-  for (const l of leagues) await addBotsToLeague(l.id);
+  if (leagues.length > 0) {
+    await prisma.leagueMember.createMany({
+      data: leagues.flatMap((l) => bots.map((b) => ({ leagueId: l.id, userId: b.id }))),
+      skipDuplicates: true,
+    });
+  }
 
+  const botIds = bots.map((b) => b.id);
   const lockCutoff = new Date(Date.now() + LOCK_WINDOW_MS);
-  const [matches, outrights, groupMatches] = await Promise.all([
-    prisma.match.findMany({
-      where: { teamsKnown: true, status: "SCHEDULED", kickoffTime: { gt: lockCutoff } },
-    }),
-    prisma.outright.findMany(),
-    prisma.match.findMany({
-      where: { stage: "GROUP", teamsKnown: true },
-      select: { homeTeam: true, awayTeam: true },
-    }),
-  ]);
-  const teams = [...new Set(groupMatches.flatMap((m) => [m.homeTeam, m.awayTeam]))];
 
-  // Per-group team sets + first kickoff (for group-order predictions).
-  const groupRows = await prisma.match.findMany({
-    where: { stage: "GROUP", teamsKnown: true },
-    select: { groupName: true, homeTeam: true, awayTeam: true, kickoffTime: true },
-  });
+  // A few bulk reads instead of hundreds of per-row round-trips (keeps the
+  // sync endpoint well under serverless time limits).
+  const [matches, outrights, groupRows, existPred, existAdv, existOut, existGrp] =
+    await Promise.all([
+      prisma.match.findMany({
+        where: { teamsKnown: true, status: "SCHEDULED", kickoffTime: { gt: lockCutoff } },
+      }),
+      prisma.outright.findMany(),
+      prisma.match.findMany({
+        where: { stage: "GROUP", teamsKnown: true },
+        select: { groupName: true, homeTeam: true, awayTeam: true, kickoffTime: true },
+      }),
+      prisma.prediction.findMany({ where: { userId: { in: botIds } }, select: { userId: true, matchId: true } }),
+      prisma.advancementPick.findMany({ where: { userId: { in: botIds } }, select: { userId: true, matchId: true } }),
+      prisma.outrightPrediction.findMany({ where: { userId: { in: botIds } }, select: { userId: true, outrightId: true } }),
+      prisma.groupPrediction.findMany({ where: { userId: { in: botIds } }, select: { userId: true, groupName: true } }),
+    ]);
+
+  const teams = [...new Set(groupRows.flatMap((m) => [m.homeTeam, m.awayTeam]))];
+  const hasPred = new Set(existPred.map((p) => `${p.userId}:${p.matchId}`));
+  const hasAdv = new Set(existAdv.map((p) => `${p.userId}:${p.matchId}`));
+  const hasOut = new Set(existOut.map((p) => `${p.userId}:${p.outrightId}`));
+  const hasGrp = new Set(existGrp.map((p) => `${p.userId}:${p.groupName}`));
+
   const groupInfo = new Map<string, { teams: Set<string>; first: Date }>();
   for (const r of groupRows) {
     const key = r.groupName ?? "Group";
@@ -133,55 +147,40 @@ export async function generateBotPredictions(): Promise<{ created: number }> {
     groupInfo.set(key, info);
   }
 
-  let created = 0;
+  const predData: { userId: string; matchId: string; homePredictedScore: number; awayPredictedScore: number }[] = [];
+  const advData: { userId: string; matchId: string; pickedSide: "HOME" | "AWAY" }[] = [];
+  const outData: { userId: string; outrightId: string; answer: string }[] = [];
+  const grpData: { userId: string; groupName: string; order: string[] }[] = [];
+
   for (const bot of bots) {
     const strategy = bot.botStrategy ?? "MONKEY";
-
     for (const m of matches) {
-      const existing = await prisma.prediction.findUnique({
-        where: { userId_matchId: { userId: bot.id, matchId: m.id } },
-        select: { id: true },
-      });
-      if (!existing) {
+      if (!hasPred.has(`${bot.id}:${m.id}`)) {
         const [h, a] = predictMatch(strategy, m.homeTeam, m.awayTeam);
-        await prisma.prediction.create({
-          data: { userId: bot.id, matchId: m.id, homePredictedScore: h, awayPredictedScore: a },
-        });
-        created++;
+        predData.push({ userId: bot.id, matchId: m.id, homePredictedScore: h, awayPredictedScore: a });
       }
-      if (m.stage === "KNOCKOUT") {
-        await prisma.advancementPick.upsert({
-          where: { userId_matchId: { userId: bot.id, matchId: m.id } },
-          update: {},
-          create: { userId: bot.id, matchId: m.id, pickedSide: pickSide(strategy, m.homeTeam, m.awayTeam) },
-        });
+      if (m.stage === "KNOCKOUT" && !hasAdv.has(`${bot.id}:${m.id}`)) {
+        advData.push({ userId: bot.id, matchId: m.id, pickedSide: pickSide(strategy, m.homeTeam, m.awayTeam) });
       }
     }
-
     for (const o of outrights) {
       if (o.lockAt.getTime() <= Date.now()) continue;
-      const existing = await prisma.outrightPrediction.findUnique({
-        where: { userId_outrightId: { userId: bot.id, outrightId: o.id } },
-        select: { id: true },
-      });
-      if (existing) continue;
-      await prisma.outrightPrediction.create({
-        data: { userId: bot.id, outrightId: o.id, answer: outrightAnswer(strategy, o.type, teams) },
-      });
+      if (!hasOut.has(`${bot.id}:${o.id}`)) {
+        outData.push({ userId: bot.id, outrightId: o.id, answer: outrightAnswer(strategy, o.type, teams) });
+      }
     }
-
     for (const [groupName, info] of groupInfo) {
-      if (info.first.getTime() <= Date.now()) continue; // locked
-      const existing = await prisma.groupPrediction.findUnique({
-        where: { userId_groupName: { userId: bot.id, groupName } },
-        select: { id: true },
-      });
-      if (existing) continue;
-      await prisma.groupPrediction.create({
-        data: { userId: bot.id, groupName, order: groupOrder(strategy, [...info.teams]) },
-      });
+      if (info.first.getTime() <= Date.now()) continue;
+      if (!hasGrp.has(`${bot.id}:${groupName}`)) {
+        grpData.push({ userId: bot.id, groupName, order: groupOrder(strategy, [...info.teams]) });
+      }
     }
   }
 
-  return { created };
+  if (predData.length) await prisma.prediction.createMany({ data: predData, skipDuplicates: true });
+  if (advData.length) await prisma.advancementPick.createMany({ data: advData, skipDuplicates: true });
+  if (outData.length) await prisma.outrightPrediction.createMany({ data: outData, skipDuplicates: true });
+  if (grpData.length) await prisma.groupPrediction.createMany({ data: grpData, skipDuplicates: true });
+
+  return { created: predData.length };
 }
