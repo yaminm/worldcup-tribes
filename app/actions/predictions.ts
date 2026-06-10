@@ -36,36 +36,52 @@ export async function lazyFill(
 
   const open = await prisma.match.findMany({
     where: { teamsKnown: true, status: "SCHEDULED", kickoffTime: { gt: lockCutoff } },
-    select: { id: true },
+    select: { id: true, stage: true },
   });
   const ids = open.map((m) => m.id);
   if (ids.length === 0) return { ok: true, filled: 0 };
 
-  const existing = new Set(
-    (
-      await prisma.prediction.findMany({
-        where: { userId: user.id, matchId: { in: ids } },
-        select: { matchId: true },
-      })
-    ).map((p) => p.matchId),
-  );
+  const [existingPreds, existingAdv] = await Promise.all([
+    prisma.prediction.findMany({
+      where: { userId: user.id, matchId: { in: ids } },
+      select: { matchId: true },
+    }),
+    prisma.advancementPick.findMany({
+      where: { userId: user.id, matchId: { in: ids } },
+      select: { matchId: true },
+    }),
+  ]);
+  const hasPred = new Set(existingPreds.map((p) => p.matchId));
+  const hasAdv = new Set(existingAdv.map((p) => p.matchId));
 
-  const toCreate = ids
-    .filter((id) => !existing.has(id))
-    .map((id) => ({
+  const predCreate = open
+    .filter((m) => !hasPred.has(m.id))
+    .map((m) => ({
       userId: user.id,
-      matchId: id,
+      matchId: m.id,
       homePredictedScore: randomGoals(),
       awayPredictedScore: randomGoals(),
     }));
 
-  if (toCreate.length > 0) {
-    await prisma.prediction.createMany({ data: toCreate, skipDuplicates: true });
+  const advCreate = open
+    .filter((m) => m.stage === "KNOCKOUT" && !hasAdv.has(m.id))
+    .map((m) => ({
+      userId: user.id,
+      matchId: m.id,
+      pickedSide: (Math.random() < 0.5 ? "HOME" : "AWAY") as "HOME" | "AWAY",
+    }));
+
+  if (predCreate.length > 0) {
+    await prisma.prediction.createMany({ data: predCreate, skipDuplicates: true });
+  }
+  if (advCreate.length > 0) {
+    await prisma.advancementPick.createMany({ data: advCreate, skipDuplicates: true });
   }
 
   revalidatePath("/predict");
+  revalidatePath("/bracket");
   revalidatePath("/");
-  return { ok: true, filled: toCreate.length };
+  return { ok: true, filled: predCreate.length + advCreate.length };
 }
 
 const schema = z.object({

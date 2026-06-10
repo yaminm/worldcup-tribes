@@ -20,7 +20,7 @@ export function LazyOzButton() {
       {state?.ok &&
         (state.filled && state.filled > 0 ? (
           <span className="text-xs text-success">
-            Filled {state.filled} open match{state.filled === 1 ? "" : "es"} 🎲
+            Filled {state.filled} pick{state.filled === 1 ? "" : "s"} 🎲
           </span>
         ) : (
           <span className="text-xs text-muted">Nothing left to fill</span>

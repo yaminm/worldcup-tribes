@@ -11,6 +11,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MatchList } from "@/components/match-list";
 import { NextMatchHero } from "@/components/next-match-hero";
+import { LazyOzButton } from "@/components/lazy-oz-button";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -62,16 +63,19 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}
-          </h1>
-          <p className="text-muted">
-            {unpredicted.length > 0
-              ? `${unpredicted.length} open match${unpredicted.length === 1 ? "" : "es"} still need your call.`
-              : "You're all caught up. Nice."}
-          </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">
+              Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}
+            </h1>
+            <p className="text-muted">
+              {unpredicted.length > 0
+                ? `${unpredicted.length} open match${unpredicted.length === 1 ? "" : "es"} still need your call — or fill them all in one click.`
+                : "You're all caught up. Nice."}
+            </p>
+          </div>
+          <LazyOzButton />
         </div>
         <Link href="/leagues" className={buttonVariants({ variant: "secondary" })}>
           My leagues
