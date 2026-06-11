@@ -134,13 +134,13 @@ export async function setResultAction(
   });
 
   const result = await scoreMatch(matchId);
-  revalidatePath("/admin");
-  revalidatePath("/predict");
+  await scoreGroupPredictions();
+  revalidateAll();
 
   return {
     ok: true,
     message: result.skipped
-      ? "Saved (not finished, predictions reset to unscored)"
+      ? "Saved. Not scored — set status to FINISHED (with scores) to award points."
       : `Saved and scored ${result.scored} predictions`,
   };
 }

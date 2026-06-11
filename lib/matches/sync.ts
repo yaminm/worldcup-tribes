@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { scoreMatch } from "@/lib/scoring-service";
 import { fetchMatches } from "./provider";
-import type { NormalizedMatch } from "./types";
+import type { MatchStatus, NormalizedMatch, Side } from "./types";
 
 export interface SyncResult {
   source: string;
@@ -11,7 +11,33 @@ export interface SyncResult {
   scored: number;
 }
 
-function toRecord(m: NormalizedMatch) {
+export interface ResultFields {
+  status: MatchStatus;
+  homeScore: number | null;
+  awayScore: number | null;
+  advancingSide: Side | null;
+}
+
+function hasResult(r: ResultFields | null | undefined): boolean {
+  return !!r && r.status === "FINISHED" && r.homeScore !== null && r.awayScore !== null;
+}
+
+/**
+ * Decides which result to keep when syncing. The provider is authoritative
+ * only when it actually has a finished result (so it can correct scores);
+ * otherwise an existing finished result is preserved — a lagging feed must
+ * never wipe a real (e.g. manually entered) result.
+ */
+export function resolveResult(
+  existing: ResultFields | null,
+  provider: ResultFields,
+): ResultFields {
+  if (hasResult(provider) || !hasResult(existing)) return provider;
+  return existing as ResultFields;
+}
+
+// Metadata fields that are always safe to refresh from the provider.
+function metaRecord(m: NormalizedMatch) {
   return {
     homeTeam: m.homeTeam,
     awayTeam: m.awayTeam,
@@ -25,12 +51,17 @@ function toRecord(m: NormalizedMatch) {
     country: m.country ?? null,
     venueCapacity: m.venueCapacity ?? null,
     kickoffTime: new Date(m.kickoffTime),
-    status: m.status,
     stage: m.stage,
+    teamsKnown: m.teamsKnown,
+  };
+}
+
+function providerResult(m: NormalizedMatch): ResultFields {
+  return {
+    status: m.status,
     homeScore: m.homeScore ?? null,
     awayScore: m.awayScore ?? null,
     advancingSide: m.advancingSide ?? null,
-    teamsKnown: m.teamsKnown,
   };
 }
 
@@ -46,16 +77,27 @@ export async function syncMatches(): Promise<SyncResult> {
   let scored = 0;
 
   for (const m of matches) {
-    const data = toRecord(m);
+    const meta = metaRecord(m);
     const existing = await prisma.match.findUnique({
       where: { externalId: m.externalId },
-      select: { id: true },
+      select: {
+        id: true,
+        status: true,
+        homeScore: true,
+        awayScore: true,
+        advancingSide: true,
+      },
     });
 
+    const result = resolveResult(existing, providerResult(m));
+
     const record = existing
-      ? await prisma.match.update({ where: { externalId: m.externalId }, data })
+      ? await prisma.match.update({
+          where: { externalId: m.externalId },
+          data: { ...meta, ...result },
+        })
       : await prisma.match.create({
-          data: { ...data, externalId: m.externalId },
+          data: { ...meta, ...result, externalId: m.externalId },
         });
 
     if (existing) updated++;
