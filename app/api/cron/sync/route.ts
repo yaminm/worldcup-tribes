@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncMatches } from "@/lib/matches/sync";
+import { syncResultsFromFootballData } from "@/lib/matches/results";
 import { generateBotPredictions } from "@/lib/bots";
 import { scoreGroupPredictions } from "@/lib/group-predict-service";
 
@@ -19,9 +20,22 @@ async function handle(req: NextRequest) {
   }
   try {
     const result = await syncMatches();
+    const results = await syncResultsFromFootballData(); // results overlay (if token set)
     await scoreGroupPredictions();
     const bots = await generateBotPredictions();
-    return NextResponse.json({ ok: true, ...result, botPicks: bots.created });
+    return NextResponse.json({
+      ok: true,
+      ...result,
+      botPicks: bots.created,
+      results: results
+        ? {
+            source: results.source,
+            matched: results.matched,
+            scored: results.scored,
+            unmatched: results.unmatched,
+          }
+        : "openfootball only (no FOOTBALL_DATA_API_TOKEN)",
+    });
   } catch (err) {
     console.error("[cron/sync] failed", err);
     return NextResponse.json(

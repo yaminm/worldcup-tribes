@@ -240,14 +240,13 @@ export const openfootballProvider: MatchProvider = {
 };
 
 /**
- * Picks the provider. football-data.org is preferred when a token is set (it
- * has live scores); otherwise we use openfootball's real fixtures. The bundled
- * JSON is only the last-resort fallback (see fetchMatches).
+ * openfootball is the canonical FIXTURE source (stable IDs that predictions are
+ * tied to). football-data.org is used only as a RESULTS overlay (see
+ * lib/matches/results.ts), never as a fixture provider, so match IDs never
+ * change underneath existing predictions.
  */
 export function getMatchProvider(): MatchProvider {
-  return process.env.FOOTBALL_DATA_API_TOKEN
-    ? footballDataProvider
-    : openfootballProvider;
+  return openfootballProvider;
 }
 
 /**
