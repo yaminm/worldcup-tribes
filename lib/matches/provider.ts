@@ -158,10 +158,17 @@ export function normalizeOpenfootballMatch(
   const ft = m.score?.ft;
   const hasScore = Array.isArray(ft) && ft.length === 2;
 
+  // Stable externalId: use the match number when present; otherwise group games
+  // can key on their (real, stable) teams, but knockout games without a number
+  // (final, third-place) must key on date+round — their team slots are
+  // placeholders ("W101") that change once resolved, which would otherwise
+  // create duplicate rows.
   const externalId =
     m.num != null
       ? `of-${m.num}`
-      : `of-${m.date}-${m.team1}-${m.team2}`.replace(/\s+/g, "_");
+      : isGroup
+        ? `of-${m.date}-${m.team1}-${m.team2}`.replace(/\s+/g, "_")
+        : `of-${m.date}-${m.round}`.replace(/\s+/g, "_");
 
   const stadium = m.ground ? meta.stadiums?.get(m.ground) : undefined;
 

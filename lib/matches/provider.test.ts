@@ -119,6 +119,26 @@ describe("normalizeOpenfootballMatch", () => {
     expect(n.awayCode).toBeNull();
   });
 
+  it("gives knockout games without a number a stable id (date+round)", () => {
+    const placeholder = normalizeOpenfootballMatch({
+      round: "Final",
+      date: "2026-07-19",
+      time: "15:00 UTC-4",
+      team1: "W101",
+      team2: "W102",
+    });
+    const resolved = normalizeOpenfootballMatch({
+      round: "Final",
+      date: "2026-07-19",
+      time: "15:00 UTC-4",
+      team1: "Argentina",
+      team2: "France",
+    });
+    // Same id before and after the teams are known => no duplicate row.
+    expect(placeholder.externalId).toBe("of-2026-07-19-Final");
+    expect(resolved.externalId).toBe(placeholder.externalId);
+  });
+
   it("maps a finished match score", () => {
     const n = normalizeOpenfootballMatch({
       round: "Matchday 1",
